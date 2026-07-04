@@ -1,0 +1,18 @@
+services:
+  tikitoki:
+    build: .
+    container_name: tikitoki
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - TIKTOKI_COOKIES_PATH=${TIKTOKI_COOKIES_PATH:-}
+      - OPERATOR_CHAT_ID=${OPERATOR_CHAT_ID:-}
+      - CONCURRENCY=${CONCURRENCY:-2}
+      - COOLDOWN_SECONDS=${COOLDOWN_SECONDS:-30}
+      - HOURLY_CAP=${HOURLY_CAP:-60}
+      - TARGET_SIZE_MB=${TARGET_SIZE_MB:-45}
+      - CROSSFADE_SECONDS=${CROSSFADE_SECONDS:-0.4}
+      - SILENT_SLIDE_SECONDS=${SILENT_SLIDE_SECONDS:-3}
+    volumes:
+      - ./data:/app/data
+      - ./cookies:/app/cookies:ro

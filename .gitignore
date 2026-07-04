@@ -1,0 +1,11 @@
+node_modules/
+dist/
+cookies.txt
+cookies/
+data/
+.env
+*.log
+.DS_Store
+coverage/
+ffmpeg2pass-*.log*
+
