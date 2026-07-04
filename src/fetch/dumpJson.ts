@@ -31,7 +31,7 @@ export async function dumpJson(opts: DumpJsonOptions): Promise<unknown> {
     const stderr = (err as Error).message;
     if (detectAuthFailure(stderr)) {
       log.error('Auth failure detected in yt-dlp stderr');
-      throw new AuthFailureError();
+      throw new AuthFailureError(undefined, 'tiktok');
     }
     throw err;
   }
@@ -57,7 +57,7 @@ async function dumpSlideshowJson(
     const stderr = (err as Error).message;
     if (detectAuthFailure(stderr)) {
       log.error('Auth failure detected in yt-dlp stderr');
-      throw new AuthFailureError();
+      throw new AuthFailureError(undefined, 'tiktok');
     }
     throw err;
   }

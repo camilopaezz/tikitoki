@@ -6,8 +6,8 @@ import { runJobLifecycle } from '../job/lifecycle.js';
 import { createSlotPool } from '../job/slots.js';
 import type { Job, JobResult, Stage } from '../job/types.js';
 import { createLogger } from '../util/logger.js';
-import { isOperatorAlert, userFacingMessage } from './errors.js';
-import { extractTikTokUrl, USAGE_MESSAGE } from './intake.js';
+import { isOperatorAlert, operatorAlertMessage, userFacingMessage } from './errors.js';
+import { extractPostUrl, USAGE_MESSAGE } from './intake.js';
 import { sendPlaceholder } from './placeholder.js';
 import { sendVideo } from './send.js';
 import { createStageEditor, stageHandler } from './stageUpdates.js';
@@ -48,7 +48,7 @@ export function createBot(deps: BotDependencies): BotInstance {
     const userId = ctx.from?.id;
     if (!userId) return;
 
-    const url = extractTikTokUrl(ctx.message.text);
+    const url = extractPostUrl(ctx.message.text);
     if (!url) {
       await ctx.reply(USAGE_MESSAGE);
       return;
@@ -78,8 +78,7 @@ export function createBot(deps: BotDependencies): BotInstance {
       } catch (err) {
         logger.error(`Job error for user ${userId}: ${(err as Error).message}`, { userId });
         if (isOperatorAlert(err)) {
-          const alert =
-            'OPERATOR ALERT: TikTok auth failure. Re-export cookies and restart the bot.';
+          const alert = operatorAlertMessage(err);
           logger.error(alert, { userId });
           await alertOperator(alert);
         }

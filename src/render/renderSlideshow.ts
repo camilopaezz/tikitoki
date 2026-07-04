@@ -14,6 +14,7 @@ export interface RenderSlideshowOptions {
   images: string[];
   audioPath?: string;
   audioDuration?: number;
+  audioStartMs?: number;
   targetSizeMb?: number;
   crossfadeSeconds?: number;
   silentSlideSeconds?: number;
@@ -36,7 +37,13 @@ export async function renderSlideshow(
   }
 
   const canvas = pickCanvas(slides);
-  const timing = computeTiming(slides.length, opts.audioDuration, opts.silentSlideSeconds ?? 3);
+  const hasAudio = opts.audioPath !== undefined;
+  const timing = computeTiming(
+    slides.length,
+    opts.audioDuration,
+    opts.silentSlideSeconds ?? 3,
+    hasAudio,
+  );
 
   writeConcatFile(opts.images, `${jobDir}/concat.txt`);
 
@@ -68,6 +75,7 @@ export async function renderSlideshow(
     canvas: finalCanvas,
     budget,
     audioPath: opts.audioPath,
+    audioStartMs: opts.audioStartMs,
     addSilentAudio: timing.addSilentAudio,
     jobId: opts.jobId,
   });

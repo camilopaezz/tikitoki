@@ -2,7 +2,7 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { runYtDlp } from '../process/ytDlp.js';
 import { createLogger } from '../util/logger.js';
-import { AuthFailureError, detectAuthFailure } from './authFailure.js';
+import { AuthFailureError, type AuthFailurePlatform, detectAuthFailure } from './authFailure.js';
 import { cookieArgs } from './cookies.js';
 
 const logger = createLogger();
@@ -25,6 +25,7 @@ export interface DownloadVideoOptions {
   cookiesPath?: string;
   maxSizeMb?: number;
   jobId?: string;
+  platform?: AuthFailurePlatform;
 }
 
 export async function downloadVideo(opts: DownloadVideoOptions): Promise<string> {
@@ -47,7 +48,7 @@ export async function downloadVideo(opts: DownloadVideoOptions): Promise<string>
     const stderr = (err as Error).message;
     if (detectAuthFailure(stderr)) {
       log.error('Auth failure detected while downloading video');
-      throw new AuthFailureError();
+      throw new AuthFailureError(undefined, opts.platform);
     }
     throw err;
   }

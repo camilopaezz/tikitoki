@@ -18,6 +18,7 @@ export interface SlideshowAssets {
   images: string[];
   audio?: string;
   duration?: number;
+  audioStartMs?: number;
 }
 
 function extensionFromUrl(url: string): string {

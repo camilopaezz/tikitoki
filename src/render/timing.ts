@@ -8,6 +8,7 @@ export function computeTiming(
   slideCount: number,
   audioDuration: number | undefined,
   silentSlideSeconds: number,
+  hasAudio: boolean = audioDuration !== undefined,
 ): Timing {
   if (slideCount === 0) {
     throw new Error('Cannot compute timing for zero slides');
@@ -17,7 +18,7 @@ export function computeTiming(
     return {
       perSlide: silentSlideSeconds,
       totalDuration: slideCount * silentSlideSeconds,
-      addSilentAudio: true,
+      addSilentAudio: !hasAudio,
     };
   }
 
