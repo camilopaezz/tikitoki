@@ -1,6 +1,6 @@
 {
   "name": "tikitoki",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Telegram bot that downloads TikTok videos and renders slideshows to MP4",
   "type": "module",
   "engines": {
