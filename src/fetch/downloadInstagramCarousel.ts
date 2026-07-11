@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createLogger } from '../util/logger.js';
-import { downloadFile } from './downloadFile.js';
+import { downloadFile, extensionFromUrl } from './downloadFile.js';
 import type { SlideshowAssets } from './downloadSlideshow.js';
 import type { CarouselEntry } from './dumpInstagramCarousel.js';
 import type { CarouselMusic } from './extractInstagramMusic.js';
@@ -15,16 +15,6 @@ export interface DownloadInstagramCarouselOptions {
   music: CarouselMusic;
   outDir: string;
   jobId?: string;
-}
-
-function extensionFromUrl(url: string): string {
-  try {
-    const pathname = new URL(url).pathname;
-    const match = pathname.match(/\.([a-zA-Z0-9]+)(?:\?.*)?$/);
-    return match ? `.${match[1].toLowerCase()}` : '';
-  } catch {
-    return '';
-  }
 }
 
 function pickLargestThumbnail(thumbnails: CarouselEntry['thumbnails']): string {
@@ -81,5 +71,10 @@ export async function downloadInstagramCarousel(
     await downloadWithReferer(opts.music.url, audio, 'audio');
   }
 
-  return { images, audio, audioStartMs: opts.music.startTimeMs };
+  return {
+    images,
+    audio,
+    duration: opts.music.duration,
+    audioStartMs: opts.music.startTimeMs,
+  };
 }

@@ -67,7 +67,7 @@ describe('downloadInstagramCarousel', () => {
     expect(result.images[1]).toBe(join(outDir, 'images', 'slide_001.jpg'));
     expect(result.images[2]).toBe(join(outDir, 'images', 'slide_002.jpg'));
     expect(result.audio).toBeUndefined();
-    expect(result.duration).toBeUndefined();
+    expect(result.duration).toBe(30);
     expect(result.audioStartMs).toBeUndefined();
     for (const img of result.images) {
       expect(readFileSync(img, 'utf8')).toMatch(/^body-/);
@@ -107,7 +107,7 @@ describe('downloadInstagramCarousel', () => {
     });
 
     expect(result.audio).toBe(join(outDir, 'audio.m4a'));
-    expect(result.duration).toBeUndefined();
+    expect(result.duration).toBe(12.5);
     expect(result.audioStartMs).toBe(5000);
     expect(readFileSync(result.audio as string, 'utf8')).toBe(
       'https://cdn.instagram.com/audio.m4a',

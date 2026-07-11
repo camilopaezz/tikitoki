@@ -37,7 +37,6 @@ export async function dumpInstagramCarousel(opts: {
 }): Promise<CarouselMetadata> {
   const log = opts.jobId ? createLogger({ jobId: opts.jobId }) : logger;
   const args = [
-    '-J',
     '--write-pages',
     '--no-download',
     '--ignore-no-formats-error',

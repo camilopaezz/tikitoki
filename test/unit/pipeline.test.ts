@@ -130,6 +130,7 @@ describe('createPipeline', () => {
       images: ['/tmp/a.jpg', '/tmp/b.jpg'],
       audioPath: '/tmp/audio.m4a',
       audioDuration: 9,
+      audioStartMs: undefined,
       targetSizeMb: 45,
       crossfadeSeconds: 0.4,
       silentSlideSeconds: 3,
@@ -305,6 +306,7 @@ describe('createPipeline', () => {
     downloadInstagramCarousel.mockResolvedValue({
       images: ['/tmp/ig/images/slide_000.jpg', '/tmp/ig/images/slide_001.jpg'],
       audio: '/tmp/ig/audio.m4a',
+      duration: 12,
       audioStartMs: 28000,
     });
     renderSlideshow.mockResolvedValue({ outputPath: '/tmp/ig-out.mp4' });
@@ -338,6 +340,7 @@ describe('createPipeline', () => {
       jobId: job.jobId,
       images: ['/tmp/ig/images/slide_000.jpg', '/tmp/ig/images/slide_001.jpg'],
       audioPath: '/tmp/ig/audio.m4a',
+      audioDuration: 12,
       audioStartMs: 28000,
       targetSizeMb: 45,
       crossfadeSeconds: 0.4,

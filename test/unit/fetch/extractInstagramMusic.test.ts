@@ -247,4 +247,25 @@ describe('extractMusicFromDir', () => {
     expect(music.url).toBe('u');
     expect(music.duration).toBe(7);
   });
+
+  it('accumulates url from one .dump and startTimeMs/duration from another', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ig-music-split-'));
+    writeFileSync(
+      join(dir, 'url.dump'),
+      dataSjsBlob({ music_asset: { download_url: 'https://cdn.example.com/split.m4a' } }),
+    );
+    writeFileSync(
+      join(dir, 'timing.dump'),
+      dataSjsBlob({
+        music_asset_info: {
+          audio_asset_start_time_in_ms: 28837,
+          duration_in_ms: 160000,
+        },
+      }),
+    );
+    const music = extractMusicFromDir(dir);
+    expect(music.url).toBe('https://cdn.example.com/split.m4a');
+    expect(music.startTimeMs).toBe(28837);
+    expect(music.duration).toBe(160);
+  });
 });

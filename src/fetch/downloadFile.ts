@@ -6,6 +6,16 @@ export interface DownloadFileOptions {
   headers?: Record<string, string>;
 }
 
+export function extensionFromUrl(url: string): string {
+  try {
+    const pathname = new URL(url).pathname;
+    const match = pathname.match(/\.([a-zA-Z0-9]+)(?:\?.*)?$/);
+    return match ? `.${match[1].toLowerCase()}` : '';
+  } catch {
+    return '';
+  }
+}
+
 export async function downloadFile(
   url: string,
   dest: string,

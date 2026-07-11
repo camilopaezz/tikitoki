@@ -117,7 +117,7 @@ describe('dumpInstagramCarousel', () => {
     ).rejects.toThrow('HTTP Error 404: Not Found');
   });
 
-  it('passes -J --write-pages --no-download --ignore-no-formats-error, cookies, and pagesDir cwd to runYtDlp', async () => {
+  it('passes --write-pages --no-download --ignore-no-formats-error, cookies, and pagesDir cwd to runYtDlp (no -J)', async () => {
     extractCarouselFromDir.mockReturnValue([imageItem('a'), imageItem('b')]);
 
     await dumpInstagramCarousel({
@@ -127,9 +127,10 @@ describe('dumpInstagramCarousel', () => {
       jobId: 'job-1',
     });
 
+    const args = runYtDlp.mock.calls[0][0] as string[];
+    expect(args).not.toContain('-J');
     expect(runYtDlp).toHaveBeenCalledWith(
       expect.arrayContaining([
-        '-J',
         '--write-pages',
         '--no-download',
         '--ignore-no-formats-error',

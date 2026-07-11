@@ -132,6 +132,17 @@ export function extractMusicFromHtml(html: string): CarouselMusic {
   return acc;
 }
 
+/** First-wins merge of music fields across dump sources. */
+function mergeCarouselMusic(into: CarouselMusic, from: CarouselMusic): void {
+  if (from.url && into.url === undefined) into.url = from.url;
+  if (from.duration !== undefined && into.duration === undefined) {
+    into.duration = from.duration;
+  }
+  if (from.startTimeMs !== undefined && into.startTimeMs === undefined) {
+    into.startTimeMs = from.startTimeMs;
+  }
+}
+
 export function extractMusicFromDir(dir: string): CarouselMusic {
   let entries: string[];
   try {
@@ -149,11 +160,7 @@ export function extractMusicFromDir(dir: string): CarouselMusic {
     } catch {
       continue;
     }
-    const music = parseDumpFile(raw);
-    if (music.url && acc.url === undefined) acc.url = music.url;
-    if (music.duration !== undefined && acc.duration === undefined) {
-      acc.duration = music.duration;
-    }
+    mergeCarouselMusic(acc, parseDumpFile(raw));
   }
   return acc;
 }
