@@ -13,6 +13,7 @@ export interface EncodeOptions {
   canvas: Canvas;
   budget: BitrateBudget;
   audioPath?: string;
+  audioStartMs?: number;
   addSilentAudio: boolean;
   jobId?: string;
 }
@@ -30,6 +31,9 @@ function buildInputArgs(opts: EncodeOptions): string[] {
   }
 
   if (opts.audioPath) {
+    if (opts.audioStartMs && opts.audioStartMs > 0) {
+      args.push('-ss', String(opts.audioStartMs / 1000));
+    }
     args.push('-i', opts.audioPath);
   }
 
@@ -81,11 +85,12 @@ function buildOutputArgs(opts: EncodeOptions, pass: 1 | 2, outputPath?: string):
     args.push('-an');
   }
 
-  if (opts.addSilentAudio) {
+  if (opts.audioPath || opts.addSilentAudio) {
     args.push('-shortest');
   }
 
   args.push('-pass', String(pass));
+  args.push('-passlogfile', join(opts.jobDir, 'passlog'));
 
   if (pass === 1) {
     args.push('-f', 'null', '/dev/null');

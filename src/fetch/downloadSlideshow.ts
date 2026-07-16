@@ -1,10 +1,8 @@
-import { createWriteStream } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
 import { createLogger } from '../util/logger.js';
 import type { FormatInfo, PostInfo, ThumbnailInfo } from './classify.js';
+import { downloadFile, extensionFromUrl } from './downloadFile.js';
 
 const logger = createLogger();
 
@@ -18,16 +16,7 @@ export interface SlideshowAssets {
   images: string[];
   audio?: string;
   duration?: number;
-}
-
-function extensionFromUrl(url: string): string {
-  try {
-    const pathname = new URL(url).pathname;
-    const match = pathname.match(/\.([a-zA-Z0-9]+)(?:\?.*)?$/);
-    return match ? `.${match[1].toLowerCase()}` : '';
-  } catch {
-    return '';
-  }
+  audioStartMs?: number;
 }
 
 function pickAudioUrl(formats: FormatInfo[] = []): string | undefined {
@@ -52,21 +41,6 @@ function slideUrls(thumbnails: ThumbnailInfo[] = []): string[] {
       return true;
     })
     .map((t) => t.url as string);
-}
-
-async function downloadFile(url: string, dest: string): Promise<void> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
-  }
-  const body = response.body;
-  if (!body) {
-    throw new Error(`Empty response body for ${url}`);
-  }
-  await pipeline(
-    Readable.fromWeb(body as import('stream/web').ReadableStream),
-    createWriteStream(dest),
-  );
 }
 
 export async function downloadSlideshow(opts: DownloadSlideshowOptions): Promise<SlideshowAssets> {

@@ -16,6 +16,13 @@ describe('computeTiming', () => {
     expect(timing.addSilentAudio).toBe(true);
   });
 
+  it('uses silent-slide timing but no silent audio when hasAudio is true', () => {
+    const timing = computeTiming(3, undefined, 3, true);
+    expect(timing.perSlide).toBe(3);
+    expect(timing.totalDuration).toBe(9);
+    expect(timing.addSilentAudio).toBe(false);
+  });
+
   it('handles a single slide', () => {
     const timing = computeTiming(1, 5, 3);
     expect(timing.perSlide).toBe(5);

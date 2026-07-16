@@ -1,7 +1,14 @@
+export type AuthFailurePlatform = 'tiktok' | 'instagram';
+
 export class AuthFailureError extends Error {
-  constructor(message = 'TikTok authentication failed; cookies may need to be re-exported.') {
+  readonly platform?: AuthFailurePlatform;
+  constructor(
+    message = 'Authentication failed; cookies may need to be re-exported.',
+    platform?: AuthFailurePlatform,
+  ) {
     super(message);
     this.name = 'AuthFailureError';
+    this.platform = platform;
   }
 }
 
@@ -12,6 +19,8 @@ const AUTH_FAILURE_PATTERNS = [
   /unable to extract login form/i,
   /authentication required/i,
   /confirm you.+?human/i,
+  /empty media response/i,
+  /accessible in your browser without being logged-in/i,
 ];
 
 export function detectAuthFailure(stderr: string): boolean {

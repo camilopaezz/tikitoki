@@ -1,3 +1,15 @@
+FROM node:22-alpine AS build
+
+# Install dependencies required to build (TypeScript lives in devDependencies).
+WORKDIR /app
+RUN corepack enable pnpm
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY tsconfig.json ./
+COPY src ./src
+RUN pnpm build
+
 FROM node:22-alpine
 
 # Install ffmpeg and dependencies required by yt-dlp.
@@ -10,10 +22,10 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o 
 WORKDIR /app
 
 RUN corepack enable pnpm
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
-COPY dist ./dist
+COPY --from=build /app/dist ./dist
 
 USER node
 
