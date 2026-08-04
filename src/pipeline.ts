@@ -9,6 +9,7 @@ import { dumpInstagramCarousel } from './fetch/dumpInstagramCarousel.js';
 import { dumpJson } from './fetch/dumpJson.js';
 import { extractMusicFromDir } from './fetch/extractInstagramMusic.js';
 import { resolveInstagramUrl } from './fetch/resolveInstagramUrl.js';
+import { resolveTwitterUrl } from './fetch/resolveTwitterUrl.js';
 import { resolveTikTokUrl } from './fetch/resolveUrl.js';
 import type { Job, JobResult, Stage } from './job/types.js';
 import { renderSlideshow } from './render/renderSlideshow.js';
@@ -25,6 +26,10 @@ type Fetched =
 
 function isInstagramUrl(url: string): boolean {
   return /instagram\.com/i.test(url);
+}
+
+function isTwitterUrl(url: string): boolean {
+  return /(?:twitter\.com|x\.com)/i.test(url);
 }
 
 async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise<Fetched> {
@@ -62,6 +67,19 @@ async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise
   }
 
   throw new Error(`Unsupported Instagram URL (not a reel or carousel): ${resolved.url}`);
+}
+
+async function fetchTwitter(job: Job, jobDir: string, config: Config): Promise<Fetched> {
+  const resolved = await resolveTwitterUrl(job.url, job.jobId);
+  const outputPath = await downloadVideo({
+    url: resolved.url,
+    outDir: jobDir,
+    cookiesPath: config.twitterCookiesPath,
+    maxSizeMb: config.targetSizeMb,
+    jobId: job.jobId,
+    platform: 'twitter',
+  });
+  return { kind: 'video', outputPath };
 }
 
 async function fetchTikTok(
@@ -123,7 +141,9 @@ export function createPipeline(options: PipelineOptions) {
 
     const fetched = isInstagramUrl(job.url)
       ? await fetchInstagram(job, jobDir, config)
-      : await fetchTikTok(job, jobDir, config, log);
+      : isTwitterUrl(job.url)
+        ? await fetchTwitter(job, jobDir, config)
+        : await fetchTikTok(job, jobDir, config, log);
 
     if (fetched.kind === 'video') {
       // Video posts bypass the Rendering stage.

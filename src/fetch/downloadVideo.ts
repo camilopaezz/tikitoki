@@ -4,6 +4,7 @@ import { runYtDlp } from '../process/ytDlp.js';
 import { createLogger } from '../util/logger.js';
 import { AuthFailureError, type AuthFailurePlatform, detectAuthFailure } from './authFailure.js';
 import { cookieArgs } from './cookies.js';
+import { detectNoVideo, NoVideoError } from './noVideo.js';
 
 const logger = createLogger();
 
@@ -49,6 +50,10 @@ export async function downloadVideo(opts: DownloadVideoOptions): Promise<string>
     if (detectAuthFailure(stderr)) {
       log.error('Auth failure detected while downloading video');
       throw new AuthFailureError(undefined, opts.platform);
+    }
+    if (detectNoVideo(stderr)) {
+      log.info('No downloadable video found for URL');
+      throw new NoVideoError();
     }
     throw err;
   }

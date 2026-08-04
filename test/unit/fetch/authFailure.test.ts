@@ -46,6 +46,25 @@ describe('detectAuthFailure', () => {
     expect(detectAuthFailure(stderr)).toBe(true);
   });
 
+  it('detects Twitter NSFW authentication requirement', () => {
+    const stderr = 'ERROR: [twitter] 123: NSFW tweet requires authentication. Use --cookies';
+    expect(detectAuthFailure(stderr)).toBe(true);
+  });
+
+  it('detects Twitter "Could not authenticate you"', () => {
+    const stderr = 'ERROR: [twitter] 123: Could not authenticate you';
+    expect(detectAuthFailure(stderr)).toBe(true);
+  });
+
+  it('detects protected tweet authorization failure', () => {
+    const stderr = 'ERROR: [twitter] 123: Not authorized to view this protected tweet';
+    expect(detectAuthFailure(stderr)).toBe(true);
+  });
+
+  it('detects generic "requires authentication" phrasing', () => {
+    expect(detectAuthFailure('ERROR: This content requires authentication')).toBe(true);
+  });
+
   it('returns false for unrelated errors', () => {
     const stderr = 'ERROR: Unable to download webpage: HTTP Error 404: Not Found';
     expect(detectAuthFailure(stderr)).toBe(false);

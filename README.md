@@ -2,13 +2,15 @@
 
 A Telegram bot that downloads TikTok video posts and renders TikTok slideshow
 posts as MP4 files, staying under Telegram's upload limits. It also downloads
-Instagram reels and renders Instagram photo carousels as MP4 slideshows.
+Instagram reels, renders Instagram photo carousels as MP4 slideshows, and
+downloads Twitter/X video posts.
 
 ## What it does
 
-- Paste a TikTok or Instagram link in a chat with the bot.
+- Paste a TikTok, Instagram, or Twitter/X link in a chat with the bot.
 - The bot fetches the post.
-- **TikTok video posts** and **Instagram reels** are sent as-is.
+- **TikTok video posts**, **Instagram reels**, and **Twitter/X videos** are
+  sent as-is.
 - **TikTok slideshow posts** and **Instagram photo carousels** are rendered into
   an MP4 with black letterboxing, even slide timing, and a short crossfade.
 - Mixed Instagram carousels (photos + videos) and single-image posts are
@@ -44,6 +46,7 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}                   # from @BotFather
       - TIKTOKI_COOKIES_PATH=/app/cookies/cookies.txt
       - INSTAGRAM_COOKIES_PATH=/app/cookies/instagram.txt
+      - TWITTER_COOKIES_PATH=/app/cookies/twitter.txt
       - OPERATOR_CHAT_ID=${OPERATOR_CHAT_ID:-}   # alerts on auth failures
       - CONCURRENCY=${CONCURRENCY:-2}
       - COOLDOWN_SECONDS=${COOLDOWN_SECONDS:-30}
@@ -52,7 +55,7 @@ services:
       - CROSSFADE_SECONDS=${CROSSFADE_SECONDS:-0.4}
       - SILENT_SLIDE_SECONDS=${SILENT_SLIDE_SECONDS:-3}
     volumes:
-      - ./cookies:/app/cookies:ro    # optional, for authenticated TikTok/Instagram access
+      - ./cookies:/app/cookies:ro    # optional, for authenticated TikTok/Instagram/Twitter access
 ```
 
 Expected directory layout:
@@ -63,16 +66,18 @@ Expected directory layout:
 ├── .env
 └── cookies/
     ├── cookies.txt      # Netscape-format TikTok cookies (optional)
-    └── instagram.txt    # Netscape-format Instagram cookies (optional)
+    ├── instagram.txt    # Netscape-format Instagram cookies (optional)
+    └── twitter.txt      # Netscape-format Twitter/X cookies (optional)
 ```
 
-The bot starts polling Telegram. Send it a TikTok link to try it out.
+The bot starts polling Telegram. Send it a TikTok, Instagram, or Twitter/X
+link to try it out.
 
 ## Cookies for private/restricted posts
 
-TikTok and Instagram both aggressively block unauthenticated requests. For
-best results, export cookies from a dedicated throwaway account for each
-platform. Cookies use the Netscape `cookies.txt` format.
+TikTok, Instagram, and Twitter/X can block unauthenticated requests. For best
+results, export cookies from a dedicated throwaway account for each platform.
+Cookies use the Netscape `cookies.txt` format.
 
 ### TikTok cookies
 
@@ -91,6 +96,15 @@ platform. Cookies use the Netscape `cookies.txt` format.
    project root (keep it separate from the TikTok cookies file).
 4. Set `INSTAGRAM_COOKIES_PATH=/app/cookies/instagram.txt` in `.env`.
 
+### Twitter/X cookies
+
+1. Install a browser extension that exports Netscape-format `cookies.txt`
+   (e.g., "Get cookies.txt LOCALLY").
+2. Log in to X (Twitter) in that browser.
+3. Export cookies to a separate file, e.g. `cookies/twitter.txt` in the
+   project root.
+4. Set `TWITTER_COOKIES_PATH=/app/cookies/twitter.txt` in `.env`.
+
 Without cookies, the bot runs in public-only mode and may fail on many posts.
 
 ## Environment variables
@@ -100,6 +114,7 @@ Without cookies, the bot runs in public-only mode and may fail on many posts.
 | `BOT_TOKEN` | yes | — | Telegram bot token |
 | `TIKTOKI_COOKIES_PATH` | no | — | Path to TikTok `cookies.txt` inside the container |
 | `INSTAGRAM_COOKIES_PATH` | no | — | Path to Instagram `cookies.txt` inside the container |
+| `TWITTER_COOKIES_PATH` | no | — | Path to Twitter/X `cookies.txt` inside the container |
 | `OPERATOR_CHAT_ID` | no | — | Telegram chat ID to alert on auth failures |
 | `CONCURRENCY` | no | 2 | Max simultaneous jobs |
 | `COOLDOWN_SECONDS` | no | 30 | Per-user submission cooldown |
@@ -121,10 +136,10 @@ npm run lint
 
 ## Troubleshooting
 
-- **"Couldn't fetch that post right now"** — Usually means TikTok or Instagram
-  served an auth challenge. If `OPERATOR_CHAT_ID` is set, the operator receives
-  an alert. Re-export the relevant platform's `cookies.txt` (TikTok and/or
-  Instagram) and restart the bot.
+- **"Couldn't fetch that post right now"** — Usually means TikTok, Instagram,
+  or Twitter/X served an auth challenge. If `OPERATOR_CHAT_ID` is set, the
+  operator receives an alert. Re-export the relevant platform's `cookies.txt`
+  and restart the bot.
 - **"This post mixes photos and videos, which isn't supported yet"** — The
   Instagram post is a mixed carousel. Send a photo-only carousel or a reel
   instead.
