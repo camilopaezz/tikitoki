@@ -393,20 +393,14 @@ FxTwitter fallback still optional later.
 
 **Goal:** materialize local files for video + avatars + quote images.
 
-- [ ] Reuse `downloadVideo` for primary MP4 (platform: `twitter`)
-- [ ] `src/fetch/downloadXAssets.ts` — download:
-  - outer avatar
-  - quote author avatar (if any)
-  - quote images / article thumbs (if any)
-  - use existing `downloadFile` patterns; skip missing optional assets with
-    placeholders (default avatar circle)
-- [ ] Probe primary video with existing `probe` helpers (dims + duration)
-- [ ] Size check: primary video still subject to `TARGET_SIZE_MB` **after**
-      re-encode budget (composite re-encodes; input may be large — do not fail
-      only on raw download size if re-encode can fit; align with product later)
+- [x] Reuse `downloadVideo` for primary MP4 (platform: `twitter`)
+- [x] `src/fetch/downloadXAssets.ts` — download outer/quote avatars + quote
+      images; soft-fail avatars; `quote_of_video` uses quoted status URL
+- [x] `probeVideo` on primary file (fallback to syndication dims)
+- [x] Optional `maxSizeMb` passthrough to yt-dlp download (re-encode budget later)
+- [x] Unit tests with injected download/probe seams
 
-**Verify:** unit tests with mocked downloads; optional integration test behind
-cookies + network (same skip style as `twitter.integration.test.ts`).
+**Verify:** unit tests with mocked downloads green.
 
 ---
 
