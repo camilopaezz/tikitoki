@@ -39,8 +39,11 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
   const outerText = truncateTweetText(assets.outer.text.displayText, 3, 180);
   const slot = layout.mediaSlot;
   const padX = layout.padX;
+  // Keep in sync with layout.ts PAD_TOP / AVATAR.
   const headerTop = 33;
   const avatarSize = 72;
+  // Text must not extend into the media hole; height is the gap under the name row.
+  const textMaxH = Math.max(0, slot.y - headerTop - 36 - 8 - 8);
 
   let quoteBlock = '';
   if (
@@ -127,7 +130,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     white-space: pre-wrap;
     word-break: break-word;
     /* Clip to region above media hole so text never pushes hole */
-    max-height: ${Math.max(0, slot.y - headerTop - avatarSize - 16)}px;
+    max-height: ${textMaxH}px;
     overflow: hidden;
   }
   /* Exact ffmpeg mediaSlot rect — must match overlay x/y/w/h */

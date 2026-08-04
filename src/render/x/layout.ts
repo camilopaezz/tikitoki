@@ -5,20 +5,25 @@ import type { XMediaFit, XPostLayout } from './types.js';
 /** Fixed feed column width (even). */
 export const XRENDER_WIDTH = 1080;
 
+// Spacing must match absolute chrome HTML (chromeHtml.ts) so media hole sits
+// tight under header/text — not a large empty gap above the video.
 const PAD_X = 44; // ~16px at 390 → scale 1080/390
-const PAD_TOP = 33;
+const PAD_TOP = 33; // header top
 const PAD_BOTTOM = 44;
-const AVATAR = 110;
-const NAME_LINE = 56;
-const TEXT_LINE = 56;
+const AVATAR = 72; // chrome avatar size
+const NAME_LINE = 36; // 28px font / 36px line-height
+const TEXT_LINE = 36;
 const TEXT_MAX_LINES = 3;
-const GAP_AFTER_TEXT = 33;
-const GAP_MEDIA_QUOTE = 33;
+const TEXT_MARGIN_TOP = 8;
+const GAP_HEADER_MEDIA = 24; // space between header block and media hole
+const GAP_MEDIA_QUOTE = 24;
 const MEDIA_RADIUS = 44; // ~16px scaled
-const QUOTE_PAD = 33;
-const QUOTE_AVATAR = 66;
+const QUOTE_PAD = 20;
+const QUOTE_AVATAR = 40;
+const QUOTE_NAME_LINE = 32;
 const QUOTE_RADIUS = 44;
 const MAX_MEDIA_H = 1600;
+const CHARS_PER_LINE = 42; // ~28px type at 992 content width
 
 function even(n: number): number {
   const r = Math.round(n);
@@ -28,9 +33,7 @@ function even(n: number): number {
 function estimateTextHeight(displayText: string, maxLines = TEXT_MAX_LINES): number {
   const t = truncateTweetText(displayText, maxLines, 180);
   if (!t) return 0;
-  // Rough: ~32 chars per line at 1080 content with 15px-equivalent type.
-  const charsPerLine = 36;
-  const lines = Math.min(maxLines, Math.max(1, Math.ceil(t.length / charsPerLine)));
+  const lines = Math.min(maxLines, Math.max(1, Math.ceil(t.length / CHARS_PER_LINE)));
   return lines * TEXT_LINE;
 }
 
@@ -72,11 +75,11 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
   const padX = PAD_X;
   const innerW = width - padX * 2;
 
-  const headerH = Math.max(AVATAR, NAME_LINE * 2);
+  // Header block: avatar row + optional caption under name (matches chromeHtml).
   const textH = estimateTextHeight(assets.outer.text.displayText);
-  const afterHeader = PAD_TOP + headerH + (textH > 0 ? GAP_AFTER_TEXT / 3 + textH : 0);
-
-  const mediaTop = even(afterHeader + (textH > 0 ? GAP_AFTER_TEXT : GAP_AFTER_TEXT / 2));
+  const nameBlockH = NAME_LINE + (textH > 0 ? TEXT_MARGIN_TOP + textH : 0);
+  const headerH = Math.max(AVATAR, nameBlockH);
+  const mediaTop = even(PAD_TOP + headerH + GAP_HEADER_MEDIA);
   const media = computeMediaSlotSize(innerW, assets.primaryVideo.width, assets.primaryVideo.height);
 
   const mediaSlot = {
@@ -95,15 +98,15 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
   if (assets.quote) {
     quoteTop = mediaTop + media.h + GAP_MEDIA_QUOTE;
     const qTextH = estimateTextHeight(assets.quote.text.displayText, 3);
-    const qHeader = Math.max(QUOTE_AVATAR, NAME_LINE);
+    const qHeader = Math.max(QUOTE_AVATAR, QUOTE_NAME_LINE);
     let imagesH = 0;
     if (assets.quote.images.length > 0) {
       // Dual-tile or single strip under quote text.
-      imagesH = even(innerW * 0.35) + QUOTE_PAD;
+      imagesH = even(innerW * 0.35) + 12;
     }
     // Nested video layouts still only reserve outer media slot for primary video;
     // quote card is text/images chrome (quote_of_video uses same outer media hole).
-    quoteH = QUOTE_PAD * 2 + qHeader + (qTextH ? qTextH + 12 : 0) + imagesH;
+    quoteH = QUOTE_PAD * 2 + qHeader + (qTextH ? 8 + qTextH : 0) + imagesH;
     quoteH = even(quoteH);
     height = quoteTop + quoteH + PAD_BOTTOM;
   }
