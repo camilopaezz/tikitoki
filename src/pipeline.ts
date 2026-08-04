@@ -12,6 +12,7 @@ import { resolveInstagramUrl } from './fetch/resolveInstagramUrl.js';
 import { resolveTwitterUrl } from './fetch/resolveTwitterUrl.js';
 import { resolveTikTokUrl } from './fetch/resolveUrl.js';
 import type { Job, JobResult, Stage } from './job/types.js';
+import { XRenderNotReadyError } from './job/xrenderErrors.js';
 import { renderSlideshow } from './render/renderSlideshow.js';
 import { createLogger } from './util/logger.js';
 import { perJobDir } from './util/tmp.js';
@@ -138,6 +139,11 @@ export function createPipeline(options: PipelineOptions) {
 
     await onStage('Fetching');
     log.info(`Fetching metadata for ${job.url}`);
+
+    // xrender chrome path lands in later phases; refuse clearly until wired.
+    if (job.mode === 'xrender') {
+      throw new XRenderNotReadyError();
+    }
 
     const fetched = isInstagramUrl(job.url)
       ? await fetchInstagram(job, jobDir, config)

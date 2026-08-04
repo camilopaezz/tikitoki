@@ -3,6 +3,7 @@ import {
   isOperatorAlert,
   operatorAlertMessage,
   userFacingMessage,
+  XRenderNotReadyError,
 } from '../../../src/bot/errors.js';
 import { AuthFailureError } from '../../../src/fetch/authFailure.js';
 import { OversizedVideoError } from '../../../src/fetch/downloadVideo.js';
@@ -22,6 +23,10 @@ describe('userFacingMessage', () => {
 
   it('maps auth failures', () => {
     expect(userFacingMessage(new AuthFailureError())).toContain('try again');
+  });
+
+  it('maps xrender-not-ready errors', () => {
+    expect(userFacingMessage(new XRenderNotReadyError())).toMatch(/xrender/i);
   });
 
   it('maps oversized video errors', () => {

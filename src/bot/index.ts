@@ -7,7 +7,13 @@ import { createSlotPool } from '../job/slots.js';
 import type { Job, JobResult, Stage } from '../job/types.js';
 import { createLogger } from '../util/logger.js';
 import { isOperatorAlert, operatorAlertMessage, userFacingMessage } from './errors.js';
-import { extractPostUrl, USAGE_MESSAGE } from './intake.js';
+import {
+  isTwitterUrl,
+  parseIntake,
+  USAGE_MESSAGE,
+  XRENDER_TWITTER_ONLY_MESSAGE,
+  XRENDER_USAGE_MESSAGE,
+} from './intake.js';
 import { sendPlaceholder } from './placeholder.js';
 import { sendVideo } from './send.js';
 import { createStageEditor, stageHandler } from './stageUpdates.js';
@@ -48,9 +54,20 @@ export function createBot(deps: BotDependencies): BotInstance {
     const userId = ctx.from?.id;
     if (!userId) return;
 
-    const url = extractPostUrl(ctx.message.text);
-    if (!url) {
+    const intake = parseIntake(ctx.message.text);
+
+    if (intake.isXRenderCommand && !intake.url) {
+      await ctx.reply(XRENDER_USAGE_MESSAGE);
+      return;
+    }
+
+    if (!intake.url) {
       await ctx.reply(USAGE_MESSAGE);
+      return;
+    }
+
+    if (intake.mode === 'xrender' && !isTwitterUrl(intake.url)) {
+      await ctx.reply(XRENDER_TWITTER_ONLY_MESSAGE);
       return;
     }
 
@@ -63,12 +80,15 @@ export function createBot(deps: BotDependencies): BotInstance {
     }
 
     const placeholderId = await sendPlaceholder(ctx);
+    const url = intake.url;
+    const mode = intake.mode;
 
     await slotPool.add(async () => {
       try {
         await runJobLifecycle({
           userId,
           url,
+          mode,
           worker,
           onStage: stageHandler(createStageEditor(ctx, placeholderId)),
           deliver: async (result) => {

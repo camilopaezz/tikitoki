@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>xrender mock — quote of video</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: #000;
+      color: #e7e9ea;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100%;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      padding: 0;
+    }
+    .stage {
+      width: 100%;
+      max-width: 390px;
+      background: #000;
+    }
+    .card {
+      padding: 12px 16px 16px;
+      border-bottom: 1px solid #2f3336;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #333;
+    }
+    .avatar-sm {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #333;
+    }
+    .main { flex: 1; min-width: 0; }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: nowrap;
+      line-height: 1.25;
+      margin-bottom: 2px;
+    }
+    .name {
+      font-weight: 700;
+      font-size: 15px;
+      color: #e7e9ea;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 48%;
+    }
+    .verified {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      display: inline-flex;
+    }
+    .verified-sm {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      display: inline-flex;
+    }
+    .handle {
+      font-size: 15px;
+      color: #71767b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .text {
+      font-size: 15px;
+      line-height: 1.35;
+      color: #e7e9ea;
+      margin: 2px 0 12px;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      word-wrap: break-word;
+    }
+    .quote {
+      border: 1px solid #2f3336;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+    }
+    .quote-body {
+      padding: 12px 12px 10px;
+    }
+    .quote-header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 4px;
+      min-width: 0;
+    }
+    .quote-name {
+      font-weight: 700;
+      font-size: 13px;
+      color: #e7e9ea;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .quote-handle {
+      font-size: 13px;
+      color: #71767b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .quote-text {
+      font-size: 15px;
+      line-height: 1.35;
+      color: #e7e9ea;
+      margin: 4px 0 10px;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+    .media {
+      position: relative;
+      width: 100%;
+      /* landscape video inside quote */
+      aspect-ratio: 16 / 9;
+      background: #16181c;
+      border-top: 1px solid #2f3336;
+    }
+    .media-fake {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background:
+        radial-gradient(ellipse at 70% 30%, rgba(220, 38, 38, 0.35), transparent 45%),
+        linear-gradient(120deg, #1a0a0a 0%, #2a1510 40%, #0c1a2e 100%);
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+    .media-fake .badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+    }
+    .duration {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .mute {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mute svg { width: 16px; height: 16px; fill: #fff; }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <article class="card" aria-label="X feed card — quote of video">
+      <div class="row">
+        <img
+          class="avatar"
+          src="https://i.pravatar.cc/150?img=33"
+          alt=""
+          width="40"
+          height="40"
+        />
+        <div class="main">
+          <div class="header">
+            <span class="name">Juan Raúl</span>
+            <span class="handle">@JuanRaul90</span>
+          </div>
+          <p class="text">
+            Esto es HISTORIA del fútbol colombiano. No lo voy a olvidar nunca.
+            Qué manera de definir el partido 🙌
+          </p>
+
+          <div class="quote">
+            <div class="quote-body">
+              <div class="quote-header">
+                <img
+                  class="avatar-sm"
+                  src="https://i.pravatar.cc/150?img=68"
+                  alt=""
+                  width="20"
+                  height="20"
+                />
+                <span class="quote-name">Deportes RCN</span>
+                <span class="verified-sm" title="Verified" aria-label="Verified">
+                  <svg viewBox="0 0 22 22" aria-hidden="true">
+                    <path
+                      d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z"
+                      fill="#1d9bf0"
+                    />
+                  </svg>
+                </span>
+                <span class="quote-handle">@DeportesRCN</span>
+              </div>
+              <p class="quote-text">
+                🚨 ¡LO HIZO! El gol del triunfo en el último minuto 😱⚽
+                Así se vivió en el Metropolitano 🇨🇴🔥
+              </p>
+            </div>
+            <div class="media" role="img" aria-label="Video 0:15">
+              <div class="media-fake">
+                <span class="badge">Noticiero · replay</span>
+                <span>VIDEO · 16:9</span>
+              </div>
+              <span class="duration">0:15</span>
+              <span class="mute" aria-label="Muted">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  </div>
+</body>
+</html>

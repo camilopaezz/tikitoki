@@ -481,4 +481,19 @@ describe('createPipeline', () => {
     );
     expect(resolveTikTokUrl).not.toHaveBeenCalled();
   });
+
+  it('rejects xrender mode until the chrome path is wired', async () => {
+    const job = {
+      ...baseJob(),
+      jobId: 'pipe-test-xrender',
+      url: 'https://x.com/user/status/123',
+      mode: 'xrender' as const,
+    };
+    const onStage = vi.fn().mockResolvedValue(undefined);
+    const runPipeline = createPipeline({ config });
+
+    await expect(runPipeline(job, onStage)).rejects.toThrow(/xrender/i);
+    expect(downloadVideo).not.toHaveBeenCalled();
+    expect(resolveTwitterUrl).not.toHaveBeenCalled();
+  });
 });

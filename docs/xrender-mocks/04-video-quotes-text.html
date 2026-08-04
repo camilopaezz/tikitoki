@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>xrender mock — video quotes text only</title>
+  <style>
+    /*
+      Tokens measured from live x.com mobile status (2026-08-04, iPhone 12 Pro viewport)
+      + feed-card layout from product refs (name/@ one line; no time; no engagement).
+      - bg: #000
+      - text: #e6e9ea (rgb 230,233,234)
+      - handle: #71767a (rgb 113,117,122)
+      - border: #323639 (rgb 50,54,57)
+      - quote radius: 16px
+      - media radius (web detail): ~29px; feed-style used here: 16px (app screenshots)
+      - avatar: 40px; quote avatar: 24px
+      - content inset: 16px; column ~343–358px at 390 width
+      - gap media → quote: 12px
+      - duration pill: 13px, bg rgba(0,0,0,.77), h 20px, px 8px, radius ~7px, mm:ss
+    */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #000;
+      color: #e6e9ea;
+      font-family: TwitterChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+    .frame {
+      width: 390px;
+      max-width: 100%;
+      background: #000;
+    }
+    .card {
+      padding: 12px 16px 16px;
+      /* no bottom hairline for isolated export */
+    }
+    .header {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #333;
+    }
+    .header-main { min-width: 0; flex: 1; }
+    .name-row {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+    .name {
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 20px;
+      color: #e6e9ea;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .badge {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      margin-left: 2px;
+    }
+    .handle {
+      font-size: 15px;
+      line-height: 20px;
+      color: #71767a;
+      font-weight: 400;
+      margin-left: 4px;
+      white-space: nowrap;
+    }
+    .text {
+      margin-top: 4px;
+      font-size: 15px;
+      line-height: 20px;
+      color: #e6e9ea;
+      font-weight: 400;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+    .media {
+      margin-top: 12px;
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #323639;
+      background: #16181c;
+    }
+    .media-fill {
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(ellipse at 40% 35%, rgba(80, 120, 90, 0.35), transparent 55%),
+        linear-gradient(165deg, #1a2a22 0%, #0c1014 50%, #121820 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 13px;
+      gap: 8px;
+    }
+    .play {
+      width: 48px;
+      height: 48px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .play::after {
+      content: "";
+      display: block;
+      width: 0;
+      height: 0;
+      margin-left: 3px;
+      border-style: solid;
+      border-width: 9px 0 9px 14px;
+      border-color: transparent transparent transparent rgba(255, 255, 255, 0.75);
+    }
+    .duration {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 20px;
+      height: 20px;
+      padding: 0 8px;
+      border-radius: 7px;
+      background: rgba(0, 0, 0, 0.77);
+      font-variant-numeric: tabular-nums;
+      display: inline-flex;
+      align-items: center;
+    }
+    .mute {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mute svg { width: 15px; height: 15px; fill: #fff; }
+
+    /* Quote card — text only */
+    .quote {
+      margin-top: 12px;
+      border: 1px solid #323639;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+    }
+    .quote-body {
+      padding: 12px;
+    }
+    .quote-header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+    .avatar-sm {
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #333;
+      margin-right: 2px;
+    }
+    .quote-name {
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 20px;
+      color: #e6e9ea;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .quote-handle {
+      font-size: 15px;
+      line-height: 20px;
+      color: #71767a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .quote-badge {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+    .quote-text {
+      margin-top: 4px;
+      font-size: 15px;
+      line-height: 20px;
+      color: #e6e9ea;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <article class="card">
+      <div class="header">
+        <img
+          class="avatar"
+          src="https://i.pravatar.cc/150?img=33"
+          alt=""
+          width="40"
+          height="40"
+        />
+        <div class="header-main">
+          <div class="name-row">
+            <span class="name">brandon*</span>
+            <svg class="badge" viewBox="0 0 22 22" aria-label="Verified">
+              <path
+                fill="#1d9bf0"
+                d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.971.854-1.245 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.878 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z"
+              />
+            </svg>
+            <span class="handle">@brndxix</span>
+          </div>
+          <p class="text">
+            <!-- outer caption optional / empty on many video posts -->
+          </p>
+        </div>
+      </div>
+
+      <div class="media" aria-label="Video">
+        <div class="media-fill">
+          <div class="play"></div>
+          <span>VIDEO · 4:3</span>
+        </div>
+        <span class="duration">00:12</span>
+        <div class="mute" aria-label="Muted">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M1.5 1.5l21 21-1.4 1.4L16 18.8V21c0 .6-.6 1-1.1.8L9.5 19H5c-.6 0-1-.4-1-1v-6c0-.6.4-1 1-1h2.6L.1 2.9 1.5 1.5zM11 5.2v4.6l-2-2V5.8L11 5.2zm8.5 3.3c.9 1.2 1.5 2.7 1.5 4.3 0 1.5-.4 2.8-1.2 4l-1.5-1.5c.4-.7.7-1.6.7-2.5 0-1.1-.3-2.1-.9-3l1.4-1.3zM14 4.1v2.2c1.7.7 3 2.4 3 4.4 0 .6-.1 1.2-.3 1.7l-1.6-1.6.1-.1c.2-.5.3-1 .3-1.5 0-1.3-.7-2.4-1.7-3V4.1h.2z"/>
+            <path d="M16.5 12c0-.4-.1-.7-.2-1.1l1.7-1.7c.5.8.8 1.8.8 2.8 0 1.3-.5 2.5-1.2 3.5l-1.5-1.5c.3-.6.4-1.3.4-2z"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="quote" role="link">
+        <div class="quote-body">
+          <div class="quote-header">
+            <img
+              class="avatar-sm"
+              src="https://i.pravatar.cc/150?img=48"
+              alt=""
+              width="24"
+              height="24"
+            />
+            <span class="quote-name">.🪐</span>
+            <span class="quote-handle">@kbbetaV2</span>
+          </div>
+          <p class="quote-text">She needs a Bbl</p>
+        </div>
+      </div>
+    </article>
+  </div>
+</body>
+</html>

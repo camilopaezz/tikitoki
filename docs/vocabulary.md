@@ -125,6 +125,24 @@ so searchability stays one-to-one.
 - **Bot token** — `BOT_TOKEN` env var. The only mandatory secret.
 - **Cookies path** — `TIKTOKI_COOKIES_PATH` env var pointing at
   `cookies.txt`. Optional; when unset we run public-only.
+- **Job mode** — how a job should process a URL: *passthrough* (default
+  download/send) or *xrender* (Twitter/X feed-card composite). Carried on
+  `Job.mode` from intake into the pipeline.
+- **`/xrender`** — Telegram command that sets job mode to *xrender* for a
+  Twitter/X status URL. Plain paste of an X link stays *passthrough*.
+
+## X / xrender domain
+
+- **xrender** — feature/mode that composites an X mobile **feed card** around
+  a post’s primary video (ffmpeg overlay), invoked via `/xrender`.
+- **Feed card** — dark-mode post chrome only (avatar, name, badge, handle,
+  text, media, optional quote card). No phone bezel, status bar, or tab bar.
+- **Media hole / media slot** — rectangle in the feed card where the primary
+  video is overlaid by ffmpeg.
+- **Quote card** — nested bordered block for a quoted post (text and/or static
+  images; may hold the video in the *quote-of-video* layout).
+- **Chrome metadata** — authors, texts, avatars, quote tree, layout kind from
+  syndication/FxTwitter (not yt-dlp alone). Distinct from **video bytes**.
 
 ## Deployment
 
