@@ -20,10 +20,17 @@ const base: XPostAssets = {
 };
 
 describe('buildChromeHtml', () => {
-  it('includes transparent media hole and no duration/mute', () => {
+  it('includes chroma media hole at exact layout coords and no duration/mute', () => {
     const layout = layoutXPost(base);
     const html = buildChromeHtml(base, layout);
+    const slot = layout.mediaSlot;
     expect(html).toContain('data-media-hole');
+    expect(html).toContain(`left: ${slot.x}px`);
+    expect(html).toContain(`top: ${slot.y}px`);
+    expect(html).toContain(`width: ${slot.w}px`);
+    expect(html).toContain(`height: ${slot.h}px`);
+    expect(html).toContain(`data-x="${slot.x}"`);
+    expect(html).toContain(`data-y="${slot.y}"`);
     expect(html).toContain('brandon*');
     expect(html).toContain('@brndxix');
     expect(html).toContain('#1d9bf0'); // verified badge

@@ -27,20 +27,27 @@ function avatarHtml(path: string | undefined, size: number, label: string): stri
 
 function badge(verified: boolean): string {
   if (!verified) return '';
-  return `<svg class="badge" viewBox="0 0 22 22" width="20" height="20" aria-hidden="true"><path fill="#1d9bf0" d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.971.854-1.245 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.878 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z"/></svg>`;
+  return `<svg class="badge" viewBox="0 0 22 22" width="28" height="28" aria-hidden="true"><path fill="#1d9bf0" d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.971.854-1.245 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.878 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z"/></svg>`;
 }
 
 /**
- * Build a full-size HTML feed card with a **transparent** media hole for ffmpeg overlay.
- * Dimensions match `layout.canvas` (CSS px = layout pixels).
+ * Build a full-size HTML feed card. The green media hole is **absolutely**
+ * positioned at `layout.mediaSlot` so ffmpeg overlay coords match the hole.
  */
 export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): string {
   const { width, height } = layout.canvas;
   const outerText = truncateTweetText(assets.outer.text.displayText, 3, 180);
   const slot = layout.mediaSlot;
+  const padX = layout.padX;
+  const headerTop = 33;
+  const avatarSize = 72;
 
   let quoteBlock = '';
-  if (assets.quote && layout.sections.quoteTop !== undefined) {
+  if (
+    assets.quote &&
+    layout.sections.quoteTop !== undefined &&
+    layout.sections.quoteH !== undefined
+  ) {
     const q = assets.quote;
     const qText = truncateTweetText(q.text.displayText, 3, 160);
     const imgs = q.images
@@ -52,7 +59,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
       })
       .join('');
     quoteBlock = `
-      <div class="quote" style="margin-top:12px">
+      <div class="quote" style="left:${padX}px;top:${layout.sections.quoteTop}px;width:${slot.w}px;height:${layout.sections.quoteH}px">
         <div class="quote-head">
           ${avatarHtml(q.author.avatarPath, 40, q.author.name)}
           <span class="name">${esc(q.author.name)}</span>
@@ -68,11 +75,14 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
 <html>
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=${width}, initial-scale=1, maximum-scale=1" />
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
     width: ${width}px;
     height: ${height}px;
+    margin: 0;
+    padding: 0;
     background: #000;
     color: #e6e9ea;
     font-family: TwitterChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -80,12 +90,20 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     overflow: hidden;
   }
   .card {
+    position: relative;
     width: ${width}px;
     height: ${height}px;
-    padding: ${layout.padX * 0.75}px ${layout.padX}px ${layout.padX}px;
     background: #000;
   }
-  .row { display: flex; gap: 12px; align-items: flex-start; }
+  .header {
+    position: absolute;
+    left: ${padX}px;
+    top: ${headerTop}px;
+    width: ${slot.w}px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
   .avatar {
     border-radius: 999px;
     object-fit: cover;
@@ -97,10 +115,10 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     font-weight: 700; font-size: 28px; color: #71767a;
   }
   .main { flex: 1; min-width: 0; }
-  .name-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .name-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .name { font-weight: 700; font-size: 28px; line-height: 36px; color: #e6e9ea; }
   .handle { font-size: 28px; line-height: 36px; color: #71767a; font-weight: 400; }
-  .badge { flex-shrink: 0; margin-left: 2px; }
+  .badge { flex-shrink: 0; }
   .text {
     margin-top: 8px;
     font-size: 28px;
@@ -108,20 +126,28 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     color: #e6e9ea;
     white-space: pre-wrap;
     word-break: break-word;
+    /* Clip to region above media hole so text never pushes hole */
+    max-height: ${Math.max(0, slot.y - headerTop - avatarSize - 16)}px;
+    overflow: hidden;
   }
+  /* Exact ffmpeg mediaSlot rect — must match overlay x/y/w/h */
   .media-hole {
-    margin-top: 16px;
+    position: absolute;
+    left: ${slot.x}px;
+    top: ${slot.y}px;
     width: ${slot.w}px;
     height: ${slot.h}px;
     border-radius: ${slot.cornerRadius}px;
-    /* Chromium screenshots flatten alpha — use chroma key green for the hole. */
     background: #00ff00;
     box-shadow: inset 0 0 0 2px #323639;
   }
   .quote {
+    position: absolute;
     border: 2px solid #323639;
     border-radius: 44px;
     padding: 20px;
+    overflow: hidden;
+    background: #000;
   }
   .quote-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .quote .avatar { width: 40px; height: 40px; }
@@ -141,8 +167,8 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
 </head>
 <body>
   <article class="card">
-    <div class="row">
-      ${avatarHtml(assets.outer.author.avatarPath, 72, assets.outer.author.name)}
+    <div class="header">
+      ${avatarHtml(assets.outer.author.avatarPath, avatarSize, assets.outer.author.name)}
       <div class="main">
         <div class="name-row">
           <span class="name">${esc(assets.outer.author.name)}</span>
@@ -152,7 +178,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
         ${outerText ? `<p class="text">${esc(outerText)}</p>` : ''}
       </div>
     </div>
-    <div class="media-hole" data-media-hole="1"></div>
+    <div class="media-hole" data-media-hole="1" data-x="${slot.x}" data-y="${slot.y}" data-w="${slot.w}" data-h="${slot.h}"></div>
     ${quoteBlock}
   </article>
 </body>

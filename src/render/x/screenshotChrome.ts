@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runProcess } from '../../process/run.js';
 import { createLogger } from '../../util/logger.js';
@@ -55,10 +55,26 @@ export async function screenshotChrome(opts: ScreenshotChromeOptions): Promise<s
     '--disable-gpu',
     '--no-sandbox',
     '--hide-scrollbars',
+    '--force-device-scale-factor=1',
+    '--default-background-color=00000000',
     `--window-size=${opts.width},${opts.height}`,
     `--screenshot=${pngPath}`,
     fileUrl,
   ]);
+
+  // Force exact canvas size (Chromium can emit slightly different screenshot dims).
+  const scaledPath = join(chromeDir, 'chrome.scaled.png');
+  await runProcess('ffmpeg', [
+    '-y',
+    '-i',
+    pngPath,
+    '-vf',
+    `scale=${opts.width}:${opts.height}:flags=neighbor,setsar=1`,
+    '-frames:v',
+    '1',
+    scaledPath,
+  ]);
+  await rename(scaledPath, pngPath);
 
   return pngPath;
 }
