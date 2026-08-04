@@ -11,6 +11,8 @@ downloads Twitter/X video posts.
 - The bot fetches the post.
 - **TikTok video posts**, **Instagram reels**, and **Twitter/X videos** are
   sent as-is.
+- **`/xrender <Twitter/X URL>`** renders a dark feed-card MP4 with the post
+  video playing in the media hole (requires Chromium for chrome raster).
 - **TikTok slideshow posts** and **Instagram photo carousels** are rendered into
   an MP4 with black letterboxing, even slide timing, and a short crossfade.
 - Mixed Instagram carousels (photos + videos) and single-image posts are

@@ -8,6 +8,8 @@ import {
 import { AuthFailureError } from '../../../src/fetch/authFailure.js';
 import { OversizedVideoError } from '../../../src/fetch/downloadVideo.js';
 import { MixedCarouselError, SingleImageError } from '../../../src/fetch/dumpInstagramCarousel.js';
+import { TwitterSyndicationError } from '../../../src/fetch/fetchTwitterSyndication.js';
+import { TwitterChromeMapError } from '../../../src/fetch/mapTwitterChrome.js';
 import { NoVideoError } from '../../../src/fetch/noVideo.js';
 import { CooldownError } from '../../../src/job/cooldown.js';
 import { HourlyCapError } from '../../../src/job/hourlyCap.js';
@@ -27,6 +29,16 @@ describe('userFacingMessage', () => {
 
   it('maps xrender-not-ready errors', () => {
     expect(userFacingMessage(new XRenderNotReadyError())).toMatch(/xrender/i);
+  });
+
+  it('maps twitter chrome map errors', () => {
+    expect(
+      userFacingMessage(new TwitterChromeMapError('That post does not have a video to render.')),
+    ).toMatch(/video/i);
+  });
+
+  it('maps syndication failures', () => {
+    expect(userFacingMessage(new TwitterSyndicationError('boom', 500))).toMatch(/metadata/i);
   });
 
   it('maps oversized video errors', () => {

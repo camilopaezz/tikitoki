@@ -444,21 +444,13 @@ FxTwitter fallback still optional later.
 
 **Goal:** end-to-end `/xrender` job.
 
-- [ ] `src/pipeline.ts`:
-  - if Twitter + `mode === 'xrender'` → fetch XPostModel + assets →
-    `renderXPost` (hits **Rendering** stage)
-  - if Twitter + default mode → existing `fetchTwitter` passthrough
-- [ ] `src/bot/index.ts`:
-  - register command handler **or** branch in `message:text` before URL-only
-    path
-  - same cooldown / hourly cap / slots / placeholder stages
-- [ ] `src/bot/errors.ts` — user messages:
-  - unsupported layout / multi-video / no video for xrender
-  - non-Twitter URL with `/xrender`
-- [ ] Update `USAGE_MESSAGE` / help snippet to mention `/xrender`
-- [ ] Unit tests: pipeline routes xrender vs passthrough; bot parses command
+- [x] `src/pipeline.ts` — `mode === 'xrender'` → syndication → downloadXAssets →
+      renderXPost (Fetching → Rendering → Uploading)
+- [x] Bot intake from Phase 0 already passes `mode`
+- [x] Error mapping for syndication + chrome map failures
+- [x] Unit tests: xrender pipeline path vs passthrough
 
-**Verify:** full unit suite green; manual Docker run with cookies optional.
+**Verify:** full unit suite green.
 
 ---
 

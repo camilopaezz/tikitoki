@@ -5,15 +5,18 @@ import { classify, type PostInfo } from './fetch/classify.js';
 import { downloadInstagramCarousel } from './fetch/downloadInstagramCarousel.js';
 import { downloadSlideshow, type SlideshowAssets } from './fetch/downloadSlideshow.js';
 import { downloadVideo } from './fetch/downloadVideo.js';
+import { downloadXAssets } from './fetch/downloadXAssets.js';
 import { dumpInstagramCarousel } from './fetch/dumpInstagramCarousel.js';
 import { dumpJson } from './fetch/dumpJson.js';
 import { extractMusicFromDir } from './fetch/extractInstagramMusic.js';
+import { fetchTwitterSyndication } from './fetch/fetchTwitterSyndication.js';
+import { parseTwitterStatusId } from './fetch/parseTwitterStatusId.js';
 import { resolveInstagramUrl } from './fetch/resolveInstagramUrl.js';
 import { resolveTwitterUrl } from './fetch/resolveTwitterUrl.js';
 import { resolveTikTokUrl } from './fetch/resolveUrl.js';
 import type { Job, JobResult, Stage } from './job/types.js';
-import { XRenderNotReadyError } from './job/xrenderErrors.js';
 import { renderSlideshow } from './render/renderSlideshow.js';
+import { renderXPost } from './render/x/renderXPost.js';
 import { createLogger } from './util/logger.js';
 import { perJobDir } from './util/tmp.js';
 
@@ -83,6 +86,44 @@ async function fetchTwitter(job: Job, jobDir: string, config: Config): Promise<F
   return { kind: 'video', outputPath };
 }
 
+async function runXRender(
+  job: Job,
+  jobDir: string,
+  config: Config,
+  onStage: (stage: Stage) => Promise<void>,
+  log: ReturnType<typeof createLogger>,
+): Promise<JobResult> {
+  const resolved = await resolveTwitterUrl(job.url, job.jobId);
+  const statusId = parseTwitterStatusId(resolved.url);
+  if (!statusId) {
+    throw new Error('Could not parse a Twitter/X status id from that URL.');
+  }
+
+  log.info(`xrender chrome fetch for status ${statusId}`);
+  const chrome = await fetchTwitterSyndication({
+    statusId,
+    sourceUrl: resolved.url,
+    jobId: job.jobId,
+  });
+
+  const assets = await downloadXAssets({
+    chrome,
+    outDir: jobDir,
+    cookiesPath: config.twitterCookiesPath,
+    jobId: job.jobId,
+  });
+
+  await onStage('Rendering');
+  const { outputPath } = await renderXPost({
+    jobId: job.jobId,
+    assets,
+    jobDir,
+    targetSizeMb: config.targetSizeMb,
+  });
+  await onStage('Uploading');
+  return { outputPath };
+}
+
 async function fetchTikTok(
   job: Job,
   jobDir: string,
@@ -140,9 +181,11 @@ export function createPipeline(options: PipelineOptions) {
     await onStage('Fetching');
     log.info(`Fetching metadata for ${job.url}`);
 
-    // xrender chrome path lands in later phases; refuse clearly until wired.
     if (job.mode === 'xrender') {
-      throw new XRenderNotReadyError();
+      if (!isTwitterUrl(job.url)) {
+        throw new Error('/xrender only works with Twitter/X links.');
+      }
+      return runXRender(job, jobDir, config, onStage, log);
     }
 
     const fetched = isInstagramUrl(job.url)

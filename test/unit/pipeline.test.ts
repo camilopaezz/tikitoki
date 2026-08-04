@@ -10,6 +10,9 @@ const resolveTwitterUrl = vi.fn();
 const dumpInstagramCarousel = vi.fn();
 const downloadInstagramCarousel = vi.fn();
 const extractMusicFromDir = vi.fn();
+const fetchTwitterSyndication = vi.fn();
+const downloadXAssets = vi.fn();
+const renderXPost = vi.fn();
 
 vi.mock('../../src/fetch/resolveUrl.js', () => ({
   resolveTikTokUrl: (...args: unknown[]) => resolveTikTokUrl(...args),
@@ -32,6 +35,15 @@ vi.mock('../../src/fetch/resolveInstagramUrl.js', () => ({
 }));
 vi.mock('../../src/fetch/resolveTwitterUrl.js', () => ({
   resolveTwitterUrl: (...args: unknown[]) => resolveTwitterUrl(...args),
+}));
+vi.mock('../../src/fetch/fetchTwitterSyndication.js', () => ({
+  fetchTwitterSyndication: (...args: unknown[]) => fetchTwitterSyndication(...args),
+}));
+vi.mock('../../src/fetch/downloadXAssets.js', () => ({
+  downloadXAssets: (...args: unknown[]) => downloadXAssets(...args),
+}));
+vi.mock('../../src/render/x/renderXPost.js', () => ({
+  renderXPost: (...args: unknown[]) => renderXPost(...args),
 }));
 vi.mock('../../src/fetch/extractInstagramMusic.js', () => ({
   extractMusicFromDir: (...args: unknown[]) => extractMusicFromDir(...args),
@@ -93,6 +105,9 @@ describe('createPipeline', () => {
     dumpInstagramCarousel.mockReset();
     downloadInstagramCarousel.mockReset();
     extractMusicFromDir.mockReset();
+    fetchTwitterSyndication.mockReset();
+    downloadXAssets.mockReset();
+    renderXPost.mockReset();
   });
 
   it('runs the slideshow path: fetch -> download -> render -> upload', async () => {
@@ -482,18 +497,53 @@ describe('createPipeline', () => {
     expect(resolveTikTokUrl).not.toHaveBeenCalled();
   });
 
-  it('rejects xrender mode until the chrome path is wired', async () => {
+  it('runs xrender: syndication → assets → renderXPost with Rendering stage', async () => {
     const job = {
       ...baseJob(),
       jobId: 'pipe-test-xrender',
-      url: 'https://x.com/user/status/123',
+      url: 'https://x.com/user/status/1234567890',
       mode: 'xrender' as const,
     };
-    const onStage = vi.fn().mockResolvedValue(undefined);
-    const runPipeline = createPipeline({ config });
+    resolveTwitterUrl.mockResolvedValue({ url: 'https://x.com/user/status/1234567890' });
+    const chrome = {
+      layoutKind: 'simple_video',
+      statusId: '1234567890',
+      sourceUrl: 'https://x.com/user/status/1234567890',
+    };
+    fetchTwitterSyndication.mockResolvedValue(chrome);
+    const assets = { layoutKind: 'simple_video', primaryVideo: { path: '/v.mp4' } };
+    downloadXAssets.mockResolvedValue(assets);
+    renderXPost.mockResolvedValue({ outputPath: '/tmp/xrender.mp4' });
 
-    await expect(runPipeline(job, onStage)).rejects.toThrow(/xrender/i);
+    const stages: string[] = [];
+    const onStage = vi.fn(async (stage: string) => {
+      stages.push(stage);
+    });
+
+    const runPipeline = createPipeline({
+      config: { ...config, twitterCookiesPath: '/data/twitter.txt' },
+    });
+    const result = await runPipeline(job, onStage);
+
+    expect(stages).toEqual(['Fetching', 'Rendering', 'Uploading']);
+    expect(result).toEqual({ outputPath: '/tmp/xrender.mp4' });
+    expect(fetchTwitterSyndication).toHaveBeenCalledWith(
+      expect.objectContaining({ statusId: '1234567890' }),
+    );
+    expect(downloadXAssets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chrome,
+        cookiesPath: '/data/twitter.txt',
+      }),
+    );
+    expect(renderXPost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assets,
+        jobId: job.jobId,
+        targetSizeMb: 45,
+      }),
+    );
     expect(downloadVideo).not.toHaveBeenCalled();
-    expect(resolveTwitterUrl).not.toHaveBeenCalled();
+    expect(renderSlideshow).not.toHaveBeenCalled();
   });
 });
