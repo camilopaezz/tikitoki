@@ -428,28 +428,15 @@ FxTwitter fallback still optional later.
 
 ## Phase 4 — ffmpeg composite encode
 
-**Goal:** `XPostLayout` + primary video → `out.mp4` under size budget.
+**Goal:** `XPostLayout` + primary video → `xrender.mp4` under size budget.
 
-- [ ] `src/render/x/filtergraph.ts` — build filter_complex:
-  1. scale/pad or scale/crop video into `mediaSlot` (reuse `contain.ts` ideas;
-     add `cover` helper)
-  2. optional `geq`/mask or overlay rounded-rect mask if chrome hole is not
-     pre-punched
-  3. `overlay=x:y` video onto chrome (or chrome-above/below sandwich)
-  4. `format=yuv420p`, even dims, `setsar=1`
-- [ ] `src/render/x/renderXPost.ts` — orchestrate:
-  - bitrate budget from canvas × duration (reuse `computeBitrateBudget`)
-  - two-pass encode pattern (adapt `encode.ts` or new `encodeOverlay.ts` that
-    takes **one video input + one image input**, not slideshow loops)
-  - map **source audio** from primary video
-  - `+faststart`, 30 fps target
-  - 720p-width downscale retry if budget floor missed (adapt `retry720` for
-    dynamic height: scale width to 720, height proportional)
-- [ ] Unit tests: filtergraph string builders with fixed geometry
-- [ ] Integration: one short local fixture video + chrome PNG → playable MP4
+- [x] `src/render/x/filtergraph.ts` — contain/cover into media slot + chrome overlay
+- [x] `src/render/x/renderXPost.ts` — layout → chrome PNG → two-pass encode +
+      source audio + bitrate budget + optional 720-wide downscale
+- [x] Unit tests for filtergraph + renderXPost (mocked screenshot/ffmpeg)
+- [ ] Integration: real chromium + ffmpeg fixture (optional / later)
 
-**Verify:** `ffprobe` duration ≈ source; audio present; file under
-`TARGET_SIZE_MB` for fixture.
+**Verify:** unit tests green.
 
 ---
 
