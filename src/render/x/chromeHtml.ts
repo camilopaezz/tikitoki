@@ -114,8 +114,8 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     width: ${slot.w}px;
     height: ${slot.h}px;
     border-radius: ${slot.cornerRadius}px;
-    /* Transparent so video shows through when composited; border drawn via box-shadow */
-    background: transparent;
+    /* Chromium screenshots flatten alpha — use chroma key green for the hole. */
+    background: #00ff00;
     box-shadow: inset 0 0 0 2px #323639;
   }
   .quote {

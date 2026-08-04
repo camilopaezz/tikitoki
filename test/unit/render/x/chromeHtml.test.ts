@@ -27,6 +27,7 @@ describe('buildChromeHtml', () => {
     expect(html).toContain('brandon*');
     expect(html).toContain('@brndxix');
     expect(html).toContain('#1d9bf0'); // verified badge
+    expect(html).toContain('#00ff00'); // chroma-key media hole
     expect(html).not.toMatch(/duration|mute|0:12|00:12/i);
   });
 

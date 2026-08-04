@@ -64,12 +64,23 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
     layout: filterLayout,
     videoWidth: opts.assets.primaryVideo.width,
     videoHeight: opts.assets.primaryVideo.height,
+    durationSec: duration,
   });
 
   const outputPath = join(opts.jobDir, 'xrender.mp4');
   const passlog = join(opts.jobDir, 'xpasslog');
 
-  const commonIn = ['-i', opts.assets.primaryVideo.path, '-loop', '1', '-i', chromePath];
+  // Loop chrome still for the full video duration; -shortest ties to the video stream.
+  const commonIn = [
+    '-i',
+    opts.assets.primaryVideo.path,
+    '-loop',
+    '1',
+    '-t',
+    String(duration),
+    '-i',
+    chromePath,
+  ];
 
   const videoCodec = [
     '-c:v',

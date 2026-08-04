@@ -26,15 +26,18 @@ describe('fitVideoToSlot', () => {
 });
 
 describe('buildXOverlayFiltergraph', () => {
-  it('wires video under chrome overlay to [out]', () => {
+  it('wires video under chrome overlay to [out] for full duration', () => {
     const g = buildXOverlayFiltergraph({
       layout,
       videoWidth: 1280,
       videoHeight: 720,
+      durationSec: 17.32,
     });
     expect(g).toContain('[0:v]');
     expect(g).toContain('[1:v]');
     expect(g).toContain(`overlay=${layout.mediaSlot.x}:${layout.mediaSlot.y}`);
+    expect(g).toContain('d=17.37');
+    expect(g).toContain('chromakey=0x00FF00');
     expect(g).toContain('[out]');
     expect(g).toContain('yuv420p');
   });
