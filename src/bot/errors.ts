@@ -1,6 +1,7 @@
 import { AuthFailureError } from '../fetch/authFailure.js';
 import { OversizedVideoError } from '../fetch/downloadVideo.js';
 import { MixedCarouselError, SingleImageError } from '../fetch/dumpInstagramCarousel.js';
+import { NoVideoError } from '../fetch/noVideo.js';
 import { CooldownError } from '../job/cooldown.js';
 import { HourlyCapError } from '../job/hourlyCap.js';
 export function userFacingMessage(err: unknown): string {
@@ -11,6 +12,9 @@ export function userFacingMessage(err: unknown): string {
   }
   if (err instanceof SingleImageError) {
     return "Single images aren't supported. Send a carousel or a reel.";
+  }
+  if (err instanceof NoVideoError) {
+    return "That post doesn't have a downloadable video.";
   }
   if (err instanceof OversizedVideoError) {
     return `That video is too large to send (${(err.sizeBytes / 1024 / 1024).toFixed(1)} MB).`;
@@ -28,7 +32,12 @@ export function isOperatorAlert(err: unknown): boolean {
 export function operatorAlertMessage(err: unknown): string {
   if (err instanceof AuthFailureError) {
     const platform = err.platform ?? 'tiktok';
-    const cookieFile = platform === 'instagram' ? 'Instagram cookies' : 'TikTok cookies';
+    const cookieFile =
+      platform === 'instagram'
+        ? 'Instagram cookies'
+        : platform === 'twitter'
+          ? 'Twitter/X cookies'
+          : 'TikTok cookies';
     return `OPERATOR ALERT: ${platform} auth failure. ${cookieFile} may need to be re-exported. Re-export cookies and restart the bot.`;
   }
   return 'OPERATOR ALERT: Auth failure. Cookies may need to be re-exported. Re-export cookies and restart the bot.';

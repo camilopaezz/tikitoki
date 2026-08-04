@@ -1,4 +1,4 @@
-export type AuthFailurePlatform = 'tiktok' | 'instagram';
+export type AuthFailurePlatform = 'tiktok' | 'instagram' | 'twitter';
 
 export class AuthFailureError extends Error {
   readonly platform?: AuthFailurePlatform;
@@ -18,9 +18,14 @@ const AUTH_FAILURE_PATTERNS = [
   /login required/i,
   /unable to extract login form/i,
   /authentication required/i,
+  /requires authentication/i,
   /confirm you.+?human/i,
   /empty media response/i,
   /accessible in your browser without being logged-in/i,
+  // Twitter/X (yt-dlp twitter extractor)
+  /nsfw tweet requires authentication/i,
+  /could not authenticate you/i,
+  /not authorized to view this protected tweet/i,
 ];
 
 export function detectAuthFailure(stderr: string): boolean {

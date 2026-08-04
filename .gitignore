@@ -8,4 +8,5 @@ data/
 .DS_Store
 coverage/
 ffmpeg2pass-*.log*
+package-lock.json
 

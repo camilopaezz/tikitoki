@@ -1,7 +1,7 @@
 {
   "name": "tikitoki",
-  "version": "1.1.0",
-  "description": "Telegram bot that downloads TikTok videos and renders slideshows to MP4",
+  "version": "1.2.0",
+  "description": "Telegram bot that downloads TikTok, Instagram, and Twitter/X videos and renders slideshows to MP4",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -35,6 +35,8 @@
     "telegram",
     "bot",
     "tiktok",
+    "instagram",
+    "twitter",
     "slideshow",
     "ffmpeg",
     "yt-dlp"

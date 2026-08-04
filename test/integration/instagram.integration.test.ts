@@ -18,6 +18,7 @@ const config: Config = {
   botToken: 'unused',
   cookiesPath: undefined,
   instagramCookiesPath,
+  twitterCookiesPath: undefined,
   concurrency: 2,
   cooldownSeconds: 30,
   hourlyCap: 60,

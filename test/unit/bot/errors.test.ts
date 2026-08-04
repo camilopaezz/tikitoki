@@ -7,6 +7,7 @@ import {
 import { AuthFailureError } from '../../../src/fetch/authFailure.js';
 import { OversizedVideoError } from '../../../src/fetch/downloadVideo.js';
 import { MixedCarouselError, SingleImageError } from '../../../src/fetch/dumpInstagramCarousel.js';
+import { NoVideoError } from '../../../src/fetch/noVideo.js';
 import { CooldownError } from '../../../src/job/cooldown.js';
 import { HourlyCapError } from '../../../src/job/hourlyCap.js';
 
@@ -42,6 +43,12 @@ describe('userFacingMessage', () => {
   it('maps single image errors to the carousel or reel prompt', () => {
     expect(userFacingMessage(new SingleImageError())).toBe(
       "Single images aren't supported. Send a carousel or a reel.",
+    );
+  });
+
+  it('maps no-video errors to a clear user message', () => {
+    expect(userFacingMessage(new NoVideoError())).toBe(
+      "That post doesn't have a downloadable video.",
     );
   });
 
@@ -85,5 +92,9 @@ describe('operatorAlertMessage', () => {
 
   it('mentions TikTok for TikTok auth failures', () => {
     expect(operatorAlertMessage(new AuthFailureError(undefined, 'tiktok'))).toMatch(/tiktok/i);
+  });
+
+  it('mentions Twitter for Twitter auth failures', () => {
+    expect(operatorAlertMessage(new AuthFailureError(undefined, 'twitter'))).toMatch(/twitter/i);
   });
 });
