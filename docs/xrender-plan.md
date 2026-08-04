@@ -364,33 +364,28 @@ passthrough.
 
 ## Phase 1 — Chrome metadata + classify layout
 
-**Goal:** given a status URL, build an `XPostModel` **without** rendering.
+**Goal:** given a status URL, build an `XPostChrome` **without** rendering.
 See **Data acquisition** above.
 
-- [ ] `src/fetch/parseTwitterStatusId.ts` — extract numeric status id from
+- [x] `src/fetch/parseTwitterStatusId.ts` — extract numeric status id from
       resolved x.com URL.
-- [ ] `src/fetch/fetchTwitterSyndication.ts` — HTTP GET syndication
-      `tweet-result?id=…`; parse JSON; map to intermediate DTO; timeout + clear
-      errors.
-- [ ] `src/fetch/fetchTwitterFxFallback.ts` (optional same phase) — FxTwitter
-      fallback mapper to the **same DTO**.
-- [ ] `src/fetch/mapTwitterChrome.ts` — pure: DTO → `XPostModel` fields
-      (authors, texts, quote, layoutKind, remote media URLs). Apply
-      `display_text_range`, avatar upscale, verified flag.
-- [ ] `src/fetch/classifyXPost.ts` — pure guards: no video / multi-video /
-      layout kind (or fold into mapper).
-- [ ] Truncation helper: `truncateTweetText(text, maxLines, maxChars)`.
-- [ ] Commit fixtures: `test/fixtures/twitter/syndication-video-quotes-text.json`
-      (from status `2084391060336259405`) + expected model snapshot; add more
-      layouts as samples are collected.
-- [ ] Unit tests: id parse, text range stripping, classify, map fixtures → model.
-- [ ] **Video bytes stay Phase 2** via existing `downloadVideo` (yt-dlp).
+- [x] `src/fetch/fetchTwitterSyndication.ts` — HTTP GET syndication
+      `tweet-result?id=…`; parse JSON; timeout + clear errors.
+- [ ] `src/fetch/fetchTwitterFxFallback.ts` (optional) — FxTwitter fallback
+      deferred; syndication is enough for v1 fixtures.
+- [x] `src/fetch/mapTwitterChrome.ts` + `twitterChromeTypes.ts` — pure map to
+      `XPostChrome` (authors, texts, quote, layoutKind, remote media URLs).
+- [x] Layout classify folded into `mapTwitterChrome` / `classifyLayout`.
+- [x] `truncateTweetText` + `sliceDisplayText` + `upscaleAvatarUrl`.
+- [x] Fixture: `test/fixtures/twitter/syndication-video-quotes-text.json`
+      (status `2084391060336259405`).
+- [x] Unit tests: id parse, text helpers, classify/map, syndication fetch mock.
+- [x] **Video bytes stay Phase 2** via existing `downloadVideo` (yt-dlp).
 
-**Risk:** syndication shape changes or rate-limits. Mitigation: FxTwitter
-fallback + fixtures; avoid scraping full x.com HTML.
+**Risk:** syndication shape changes or rate-limits. Mitigation: fixtures;
+FxTwitter fallback still optional later.
 
-**Verify:** unit tests green; manual `curl` syndication for the fixture id
-matches mapper output.
+**Verify:** `pnpm typecheck && pnpm lint && pnpm test` green.
 
 ---
 
