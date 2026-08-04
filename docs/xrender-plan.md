@@ -406,46 +406,23 @@ FxTwitter fallback still optional later.
 
 ## Phase 3 — Layout engine (geometry + chrome still)
 
-**Goal:** pure-ish layout: `XPostModel` → `XPostLayout`.
+**Goal:** pure-ish layout: assets → `XPostLayout` + chrome HTML/PNG.
 
 ### 3a — Geometry (no browser)
 
-- [ ] `src/render/x/layout.ts` — fixed content width (e.g. **1080** or **720**
-      for faster v1; pick one constant `XRENDER_WIDTH`)
-- [ ] Compute:
-  - header height (avatar + name row)
-  - text block height from truncated lines
-  - media slot size from video aspect + fit rules
-  - quote card height (if any)
-  - total canvas height, **round up to even** for yuv420p
-- [ ] Media fit:
-  - if `videoW/videoH >= 1` → slot uses contain math (letterbox inside slot)
-  - if `videoW/videoH < 1` → tall path (cover or height = f(width, aspect) with
-    max clamp so quote card still fits on canvas)
-- [ ] Unit tests: golden numbers for 16:9, 1:1, 9:16, with and without quote
+- [x] `src/render/x/layout.ts` — `XRENDER_WIDTH = 1080`, dynamic height
+- [x] Media fit: landscape/square **contain**, tall **cover** (clamped)
+- [x] Quote card height for text ± images
+- [x] Unit tests for slot fit + quote growth
 
 ### 3b — Chrome raster
 
-Pick **one** for v1 and stick to the layout contract:
+- [x] **A-lite:** HTML template (`chromeHtml.ts`) + headless Chromium screenshot
+      (`screenshotChrome.ts`) — transparent media hole, no duration/mute
+- [x] Unit tests for HTML content (badge, quote, no mute/duration)
+- [ ] Optional PNG golden fixtures / Docker chromium package (Phase 6)
 
-| Option | When |
-|--------|------|
-| **A. HTML template + Playwright screenshot** | Best emoji/text; heavier Docker |
-| **B. SVG/HTML → resvg/sharp** | No full Chromium if stack allows |
-| **C. Layered PNG templates + drawtext-free text as pre-rendered** | Lightest ops |
-
-**Plan default: A if Docker impact is acceptable; otherwise C for skeleton then
-upgrade.** Decision checkpoint at end of Phase 3a.
-
-- [ ] Template matches references: dark bg, circular avatar, name + badge +
-      `@handle`, truncated text, rounded media hole (transparent), quote card
-      border
-- [ ] **No** timestamps, **no** engagement row, **no** duration/mute overlays
-- [ ] Output PNG(s) into job dir
-- [ ] Optional cache key: hash(layoutKind, texts, handles, avatar urls, dims,
-      template version) → reuse chrome PNG
-
-**Verify:** snapshot/fixture PNGs for three layout kinds (visual review in PR).
+**Verify:** unit tests green; screenshot needs chromium at runtime.
 
 ---
 
