@@ -456,17 +456,12 @@ FxTwitter fallback still optional later.
 
 ## Phase 6 — Docs, Docker, polish
 
-- [ ] `README.md` — document `/xrender`, cookies, limitations (quotes/images,
-      no engagement row, truncate text)
-- [ ] `.env.example` — no new secrets expected; note if Playwright fonts needed
-- [ ] `Dockerfile` — only if Phase 3 chose Chromium: install browser deps or
-      document multi-stage; prefer keeping Alpine ffmpeg path if chrome is
-      pre-raster or externalized
-- [ ] Version bump when shipping (follow prior Instagram/Twitter bumps)
-- [ ] Integration test (skip without cookies/network): `/xrender` path stages
-      include `Rendering`
+- [x] `README.md` — `/xrender` + Chromium requirement
+- [x] `Dockerfile` — Alpine `chromium` + fonts for chrome screenshots
+- [x] Version bump to **1.3.0**
+- [ ] Integration test (optional): live `/xrender` with network/cookies
 
-**Verify:** README accurate; image still builds; bot starts.
+**Verify:** unit suite green; Docker image installs chromium.
 
 ---
 

@@ -18,12 +18,13 @@ downloads Twitter/X video posts.
 - Mixed Instagram carousels (photos + videos) and single-image posts are
   rejected with a friendly message.
 - The bot updates a placeholder message through `Fetching` → `Rendering`
-  (slideshows/carousels only) → `Uploading`.
+  (slideshows/carousels/**`/xrender`**) → `Uploading`.
 
 ## Requirements
 
 - Node.js 20+ (for local development)
 - `ffmpeg` and `yt-dlp` installed (the Docker image includes both)
+- `chromium` (or Chrome) for **`/xrender`** chrome raster (included in Docker)
 - A Telegram bot token from [@BotFather](https://t.me/botfather)
 
 ## Quick start with Docker Compose
