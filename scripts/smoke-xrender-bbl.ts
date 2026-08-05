@@ -4,9 +4,11 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { loadConfig } from '../src/config/index.js';
 import { createPipeline } from '../src/pipeline.js';
+import { runProcess } from '../src/process/run.js';
 import { perJobDir, rmJobDir } from '../src/util/tmp.js';
 
-const url = 'https://x.com/i/status/2084391060336259405';
+const url = 'https://x.com/i/status/2084667356366680210';
+const statusId = '2084667356366680210';
 
 async function main() {
   const jobId = randomUUID();
@@ -31,18 +33,34 @@ async function main() {
 
     const downloads = join(homedir(), 'Downloads');
     await mkdir(downloads, { recursive: true });
-    const dest = join(downloads, 'xrender-bbl-brndxix.mp4');
+    const prefix = join(downloads, `xrender-${statusId}`);
+
+    const dest = `${prefix}.mp4`;
     await copyFile(result.outputPath, dest);
     console.log('saved', dest);
 
     try {
       const chrome = join(perJobDir(jobId), 'xchrome', 'chrome.png');
-      const chromeDest = join(downloads, 'xrender-bbl-brndxix-chrome.png');
+      const chromeDest = `${prefix}-chrome.png`;
       await copyFile(chrome, chromeDest);
       console.log('chrome', chromeDest);
     } catch (err) {
       console.log('no chrome png:', (err as Error).message);
     }
+
+    // First composed frame for quick visual check
+    const frameDest = `${prefix}-frame.jpg`;
+    await runProcess('ffmpeg', [
+      '-y',
+      '-i',
+      result.outputPath,
+      '-frames:v',
+      '1',
+      '-q:v',
+      '2',
+      frameDest,
+    ]);
+    console.log('frame', frameDest);
   } finally {
     rmJobDir(jobId);
   }

@@ -29,8 +29,9 @@ export function buildXOverlayFiltergraph(inputs: XOverlayFilterInputs): string {
     `[0:v]${fitFilters},setsar=1,format=yuv420p[vid]`,
     `color=c=black:s=${canvas.width}x${canvas.height}:d=${d}[bg]`,
     `[bg][vid]overlay=${mediaSlot.x}:${mediaSlot.y}:shortest=1[base]`,
-    // similarity/blend tuned for solid #00FF00 hole; keep UI greens rare
-    `[1:v]format=rgba,scale=${canvas.width}:${canvas.height},chromakey=0x00FF00:0.12:0.08[chrome]`,
+    // similarity/blend high enough to eat anti-aliased green fringe on the
+    // rounded hole edge (was a visible green ring at 0.12:0.08).
+    `[1:v]format=rgba,scale=${canvas.width}:${canvas.height},chromakey=0x00FF00:0.22:0.12[chrome]`,
     `[base][chrome]overlay=0:0:shortest=1,format=yuv420p,setparams=range=tv[out]`,
   ];
 
