@@ -78,7 +78,7 @@ describe('layoutXPost', () => {
     expect(withQuote.sections.quoteH).toBeGreaterThan(0);
   });
 
-  it('adds image band height for quote images', () => {
+  it('adds image band height for multi quote images', () => {
     const textOnly = layoutXPost(
       assets({
         quote: {
@@ -98,5 +98,38 @@ describe('layoutXPost', () => {
       }),
     );
     expect(withImgs.sections.quoteH ?? 0).toBeGreaterThan(textOnly.sections.quoteH ?? 0);
+  });
+
+  it('single quote image uses side-by-side height (not stacked band)', () => {
+    const textOnly = layoutXPost(
+      assets({
+        quote: {
+          author: { name: 'Q', handle: 'q', verified: false },
+          text: { text: 'x', displayText: 'x' },
+          images: [],
+        },
+      }),
+    );
+    const single = layoutXPost(
+      assets({
+        quote: {
+          author: { name: 'Q', handle: 'q', verified: false },
+          text: { text: 'x', displayText: 'x' },
+          images: [{ path: '/a.jpg' }],
+        },
+      }),
+    );
+    const multi = layoutXPost(
+      assets({
+        quote: {
+          author: { name: 'Q', handle: 'q', verified: false },
+          text: { text: 'x', displayText: 'x' },
+          images: [{ path: '/a.jpg' }, { path: '/b.jpg' }],
+        },
+      }),
+    );
+    // Side-by-side still taller than text-only (thumb floor), but shorter than stacked multi grid.
+    expect(single.sections.quoteH ?? 0).toBeGreaterThan(textOnly.sections.quoteH ?? 0);
+    expect(single.sections.quoteH ?? 0).toBeLessThan(multi.sections.quoteH ?? 0);
   });
 });

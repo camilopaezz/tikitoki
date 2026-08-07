@@ -52,7 +52,50 @@ describe('buildChromeHtml', () => {
     const html = buildChromeHtml(assets, layoutXPost(assets));
     expect(html).toContain('She needs a Bbl');
     expect(html).toContain('@kbbetaV2');
-    expect(html).toContain('class="quote"');
+    expect(html).toMatch(/class="quote"/);
+    expect(html).not.toMatch(/class="quote quote-single"/);
     expect(html).not.toMatch(/class="quote"[^>]*top:/);
+    // Feed: quote aligns with text column (right of avatar), not full card width.
+    expect(html).toMatch(/class="quote"[^>]*margin-left:/);
+  });
+
+  it('places single quote image left of body text with author above (feed)', () => {
+    const assets: XPostAssets = {
+      ...base,
+      layoutKind: 'video_quotes',
+      quote: {
+        author: { name: 'morenza', handle: 'morenza_14', verified: false },
+        text: {
+          text: 'CARVAJAL AL DEPOR',
+          displayText: 'CARVAJAL AL DEPOR',
+        },
+        images: [{ path: '/tmp/q.jpg' }],
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    expect(html).toMatch(/class="quote quote-single"/);
+    expect(html).toMatch(/class="qimg qimg-single"/);
+    expect(html).toContain('class="quote-body"');
+    expect(html).not.toMatch(/class="qimgs"/);
+    // Body markup: author head before image row; image before body text.
+    const body = html.slice(html.indexOf('<body>'));
+    expect(body.indexOf('quote-head')).toBeLessThan(body.indexOf('quote-body'));
+    expect(body.indexOf('qimg-single')).toBeLessThan(body.indexOf('class="qtext"'));
+  });
+
+  it('keeps multi-image quote as a grid under text', () => {
+    const assets: XPostAssets = {
+      ...base,
+      layoutKind: 'video_quotes',
+      quote: {
+        author: { name: 'Q', handle: 'q', verified: false },
+        text: { text: 'two pics', displayText: 'two pics' },
+        images: [{ path: '/a.jpg' }, { path: '/b.jpg' }],
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    expect(html).not.toMatch(/class="quote quote-single"/);
+    expect(html).toMatch(/class="qimgs"/);
+    expect(html).toMatch(/grid-template-columns:\s*repeat\(2/);
   });
 });

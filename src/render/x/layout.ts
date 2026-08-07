@@ -24,11 +24,16 @@ const GAP_MEDIA_QUOTE = 24;
 const MEDIA_RADIUS = 44;
 const QUOTE_PAD = 20;
 const QUOTE_AVATAR = 40;
-const QUOTE_NAME_LINE = 38;
-const QUOTE_TEXT_LINE = 42;
+/** Match outer name/text line height (feed 15/20 scaled). */
+const QUOTE_NAME_LINE = 44;
+const QUOTE_TEXT_LINE = 44;
 const QUOTE_TEXT_MARGIN_TOP = 8;
 const QUOTE_RADIUS = 44;
-const QUOTE_IMAGES_H = 180 + 12; // .qimg height + margin-top
+/** Multi-image band under quote text (.qimg height + margin-top). */
+const QUOTE_IMAGES_H = 180 + 12;
+/** Single quote image sits beside text (square thumb) — not stacked under it.
+ * ~100px @ 390 feed × scale ≈ 2.4 → ~240 at 1080 chrome. */
+const QUOTE_SINGLE_IMG = 240;
 /**
  * Max media-box height as a multiple of content width. Tall videos are
  * **contained** into this box (full frame visible) — width shrinks so aspect
@@ -127,10 +132,14 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
       ? 3 * QUOTE_TEXT_LINE
       : 0;
     const qHeader = Math.max(QUOTE_AVATAR, QUOTE_NAME_LINE);
-    const imagesH = assets.quote.images.length > 0 ? QUOTE_IMAGES_H : 0;
-    quoteH = even(
-      QUOTE_PAD * 2 + qHeader + (qTextH ? QUOTE_TEXT_MARGIN_TOP + qTextH : 0) + imagesH,
-    );
+    const textBlockH = qHeader + (qTextH ? QUOTE_TEXT_MARGIN_TOP + qTextH : 0);
+    const nImgs = assets.quote.images.length;
+    // Single image: header on top, then thumb | body text. Multi: header + text + grid.
+    const bodyH =
+      nImgs === 1
+        ? qHeader + 12 + Math.max(QUOTE_SINGLE_IMG, qTextH || 0)
+        : textBlockH + (nImgs > 1 ? QUOTE_IMAGES_H : 0);
+    quoteH = even(QUOTE_PAD * 2 + bodyH);
     height = quoteTop + quoteH + PAD_BOTTOM;
   }
 

@@ -43,33 +43,58 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
   const outerText = truncateTweetText(assets.outer.text.displayText, 3, 180);
   const slot = layout.mediaSlot;
   const padX = layout.padX;
-  // Header + quote span the full content column; media may be narrower + centered.
+  // Outer header spans full content; media + quote sit in the text column (right of avatar).
   const colW = width - padX * 2;
   const { PAD_TOP, PAD_BOTTOM, AVATAR, HEADER_GAP, GAP_HEADER_MEDIA } = X_LAYOUT_CONSTANTS;
+  const textColIndent = AVATAR + HEADER_GAP;
+  const textColW = colW - textColIndent;
+  const quoteImgCount = assets.quote?.images.length ?? 0;
+  const singleQuoteImg = quoteImgCount === 1;
 
   let quoteBlock = '';
   if (assets.quote) {
     const q = assets.quote;
-    const qText = truncateTweetText(q.text.displayText, 3, 160);
-    const imgs = q.images
-      .map((img) => {
-        const src = fileSrc(img.path);
-        return src
-          ? `<img class="qimg" src="${esc(src)}" alt="" />`
-          : `<div class="qimg ph"></div>`;
-      })
-      .join('');
-    quoteBlock = `
-      <div class="quote" style="width:${colW}px">
+    // Same body type as outer; truncate to ~3 lines rather than shrinking type.
+    const qText = truncateTweetText(q.text.displayText, 3, 140);
+    const head = `
         <div class="quote-head">
           ${avatarHtml(q.author.avatarPath, 40, q.author.name)}
           <span class="name">${esc(q.author.name)}</span>
           ${badge(q.author.verified)}
           <span class="handle">@${esc(q.author.handle)}</span>
+        </div>`;
+    const body = qText ? `<p class="qtext">${esc(qText)}</p>` : '';
+
+    if (singleQuoteImg) {
+      // X feed: author row on top; single photo left of body text (not beside name).
+      const src = fileSrc(q.images[0]?.path);
+      const thumb = src
+        ? `<img class="qimg qimg-single" src="${esc(src)}" alt="" />`
+        : `<div class="qimg qimg-single ph"></div>`;
+      quoteBlock = `
+      <div class="quote quote-single" style="width:${textColW}px;margin-left:${textColIndent}px">
+        ${head}
+        <div class="quote-body">
+          ${thumb}
+          ${body}
         </div>
-        ${qText ? `<p class="qtext">${esc(qText)}</p>` : ''}
+      </div>`;
+    } else {
+      const imgs = q.images
+        .map((img) => {
+          const src = fileSrc(img.path);
+          return src
+            ? `<img class="qimg" src="${esc(src)}" alt="" />`
+            : `<div class="qimg ph"></div>`;
+        })
+        .join('');
+      quoteBlock = `
+      <div class="quote" style="width:${textColW}px;margin-left:${textColIndent}px">
+        ${head}
+        ${body}
         ${imgs ? `<div class="qimgs">${imgs}</div>` : ''}
       </div>`;
+    }
   }
 
   return `<!DOCTYPE html>
@@ -168,14 +193,31 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     overflow: hidden;
     background: #000;
     flex-shrink: 0;
+    align-self: flex-start;
   }
+  /* Single image: author full-width on top; thumb left of body text (X feed). */
+  .quote.quote-single {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+  .quote-body {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+    min-width: 0;
+  }
+  .quote-body .qtext { margin-top: 0; flex: 1; min-width: 0; }
   .quote-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .quote .avatar { width: 40px; height: 40px; }
-  .quote .name, .quote .handle { font-size: 30px; line-height: 38px; }
+  /* Same type scale as outer feed text (15/20 @390 → 36/44 @1080). Truncate, don't shrink. */
+  .quote .name, .quote .handle { font-size: 36px; line-height: 44px; }
   .qtext {
     margin-top: 8px;
-    font-size: 34px;
-    line-height: 42px;
+    font-size: 36px;
+    line-height: 44px;
     color: #e6e9ea;
     white-space: pre-wrap;
     word-break: break-word;
@@ -183,12 +225,18 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
   .qimgs {
     margin-top: 12px;
     display: grid;
-    grid-template-columns: repeat(${Math.min(2, Math.max(1, assets.quote?.images.length ?? 1))}, 1fr);
+    grid-template-columns: repeat(${Math.min(2, Math.max(1, quoteImgCount || 1))}, 1fr);
     gap: 4px;
     border-radius: 16px;
     overflow: hidden;
   }
   .qimg { width: 100%; height: 180px; object-fit: cover; background: #16181c; display: block; }
+  .qimg.qimg-single {
+    width: 240px;
+    height: 240px;
+    flex-shrink: 0;
+    border-radius: 28px;
+  }
   .qimg.ph { background: #16181c; }
 </style>
 </head>
