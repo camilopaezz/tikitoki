@@ -11,8 +11,8 @@ const PAD_X = 44; // ~16px at 390 → scale 1080/390
 const PAD_TOP = 33; // header top
 const PAD_BOTTOM = 44;
 const AVATAR = 72; // chrome avatar size
-const NAME_LINE = 40; // 32px font / 40px line-height
-const TEXT_LINE = 40;
+const NAME_LINE = 44; // 36px font / 44px line-height
+const TEXT_LINE = 44;
 const TEXT_MAX_LINES = 3;
 const TEXT_MARGIN_TOP = 8;
 const GAP_HEADER_MEDIA = 24; // space between header block and media hole
@@ -20,17 +20,17 @@ const GAP_MEDIA_QUOTE = 24;
 const MEDIA_RADIUS = 44; // ~16px scaled
 const QUOTE_PAD = 20;
 const QUOTE_AVATAR = 40;
-const QUOTE_NAME_LINE = 36; // 28px font / 36px line-height (quote)
-const QUOTE_TEXT_LINE = 38; // 30px font / 38px line-height
+const QUOTE_NAME_LINE = 38; // 30px font / 38px line-height (quote)
+const QUOTE_TEXT_LINE = 42; // 34px font / 42px line-height
 const QUOTE_TEXT_MARGIN_TOP = 8;
 const QUOTE_RADIUS = 44;
 const MAX_MEDIA_H = 1600;
 // Proportional Latin average (~0.55em). Too-low values over-reserve vertical
 // space and leave empty padding at the bottom of text blocks / quote cards.
 // Outer: slightly conservative so media hole never climbs into caption.
-const CHARS_PER_LINE = 48; // ~32px type at 992 content width
+const CHARS_PER_LINE = 42; // ~36px type at 992 content width
 // Quote: closer to real wrap so the card doesn't grow empty bottom padding.
-const QUOTE_CHARS_PER_LINE = 58; // ~30px type inside quote (pad subtracted)
+const QUOTE_CHARS_PER_LINE = 52; // ~34px type inside quote (pad subtracted)
 
 function even(n: number): number {
   const r = Math.round(n);

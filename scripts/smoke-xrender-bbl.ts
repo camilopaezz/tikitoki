@@ -7,8 +7,8 @@ import { createPipeline } from '../src/pipeline.js';
 import { runProcess } from '../src/process/run.js';
 import { perJobDir, rmJobDir } from '../src/util/tmp.js';
 
-const url = 'https://x.com/i/status/2084667356366680210';
-const statusId = '2084667356366680210';
+const url = 'https://x.com/i/status/2085005531727671362';
+const statusId = '2085005531727671362';
 
 async function main() {
   const jobId = randomUUID();

@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
   sliceDisplayText,
+  stripTcoUrls,
   truncateTweetText,
   upscaleAvatarUrl,
 } from '../../../src/fetch/truncateTweetText.js';
+
+describe('stripTcoUrls', () => {
+  it('removes bare media t.co captions', () => {
+    expect(stripTcoUrls('https://t.co/iThHYHmd82')).toBe('');
+  });
+
+  it('removes t.co while keeping real caption text', () => {
+    expect(stripTcoUrls('Golazo https://t.co/abc more')).toBe('Golazo more');
+  });
+});
 
 describe('sliceDisplayText', () => {
   it('returns empty when range is empty (media-only t.co)', () => {
@@ -12,6 +23,11 @@ describe('sliceDisplayText', () => {
 
   it('slices by display_text_range', () => {
     expect(sliceDisplayText('Hello world https://t.co/x', [0, 11])).toBe('Hello world');
+  });
+
+  it('strips t.co even when range includes the short link', () => {
+    expect(sliceDisplayText('https://t.co/iThHYHmd82', [0, 23])).toBe('');
+    expect(sliceDisplayText('Hi https://t.co/abc', undefined)).toBe('Hi');
   });
 
   it('returns full trimmed text when range missing', () => {
@@ -26,6 +42,11 @@ describe('truncateTweetText', () => {
 
   it('leaves short text alone', () => {
     expect(truncateTweetText('She needs a Bbl')).toBe('She needs a Bbl');
+  });
+
+  it('never keeps t.co in chrome text', () => {
+    expect(truncateTweetText('https://t.co/iThHYHmd82')).toBe('');
+    expect(truncateTweetText('Watch this https://t.co/xyz')).toBe('Watch this');
   });
 
   it('appends ellipsis when over maxChars', () => {

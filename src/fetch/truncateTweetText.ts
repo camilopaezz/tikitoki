@@ -1,9 +1,26 @@
+/** Twitter short links (media attachments / auto-appended). Never show in chrome. */
+const TCO_URL_RE = /https?:\/\/t\.co\/[A-Za-z0-9]+/gi;
+
+/**
+ * Drop t.co URLs and tidy leftover whitespace. Media-only captions become "".
+ */
+export function stripTcoUrls(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(TCO_URL_RE, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 /**
  * Truncate tweet text for feed-card chrome (~2–3 lines).
  * Prefers a word boundary when maxChars cuts mid-word.
  */
 export function truncateTweetText(text: string, maxLines = 3, maxChars = 140): string {
-  const normalized = text.replace(/\s+/g, ' ').trim();
+  const normalized = stripTcoUrls(text).replace(/\s+/g, ' ').trim();
   if (!normalized) return '';
 
   const byLines = normalized.split(/\n+/).slice(0, maxLines).join('\n');
@@ -26,17 +43,23 @@ export function truncateTweetText(text: string, maxLines = 3, maxChars = 140): s
 /**
  * Apply Twitter display_text_range [start, end) on UTF-16 code units
  * (syndication ranges are UTF-16 indices, same as JS string indices for BMP).
+ * Always strips residual t.co URLs (media links often leak past the range).
  */
 export function sliceDisplayText(
   text: string,
   range: readonly [number, number] | number[] | undefined,
 ): string {
   if (!text) return '';
-  if (!range || range.length < 2) return text.trim();
-  const start = Math.max(0, range[0] ?? 0);
-  const end = Math.min(text.length, range[1] ?? text.length);
-  if (end <= start) return '';
-  return text.slice(start, end).trim();
+  let sliced: string;
+  if (!range || range.length < 2) {
+    sliced = text.trim();
+  } else {
+    const start = Math.max(0, range[0] ?? 0);
+    const end = Math.min(text.length, range[1] ?? text.length);
+    if (end <= start) return '';
+    sliced = text.slice(start, end).trim();
+  }
+  return stripTcoUrls(sliced);
 }
 
 /** Prefer higher-res avatar from twimg `_normal` / `_200x200` URLs. */
