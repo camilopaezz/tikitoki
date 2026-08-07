@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { extractPostUrl, USAGE_MESSAGE } from '../../../src/bot/intake.js';
+import {
+  extractPostUrl,
+  isTwitterUrl,
+  parseIntake,
+  USAGE_MESSAGE,
+  X_CHOICE_MESSAGE,
+} from '../../../src/bot/intake.js';
 
 describe('extractPostUrl', () => {
   describe('TikTok URLs', () => {
@@ -71,10 +77,49 @@ describe('extractPostUrl', () => {
   });
 });
 
+describe('isTwitterUrl', () => {
+  it('matches x.com and twitter.com', () => {
+    expect(isTwitterUrl('https://x.com/u/status/1')).toBe(true);
+    expect(isTwitterUrl('https://twitter.com/u/status/1')).toBe(true);
+  });
+
+  it('rejects other hosts', () => {
+    expect(isTwitterUrl('https://www.tiktok.com/@u/video/1')).toBe(false);
+    expect(isTwitterUrl('https://instagram.com/reel/abc')).toBe(false);
+  });
+});
+
+describe('parseIntake', () => {
+  it('extracts a plain X URL without choosing a mode', () => {
+    const url = 'https://x.com/user/status/123';
+    expect(parseIntake(url)).toEqual({ url });
+  });
+
+  it('still extracts a URL when text includes /xrender', () => {
+    const url = 'https://x.com/user/status/123';
+    expect(parseIntake(`/xrender ${url}`)).toEqual({ url });
+  });
+
+  it('returns no URL for unrelated text', () => {
+    expect(parseIntake('hello')).toEqual({ url: undefined });
+  });
+
+  it('returns no URL for /xrender alone', () => {
+    expect(parseIntake('/xrender')).toEqual({ url: undefined });
+  });
+});
+
 describe('USAGE_MESSAGE', () => {
-  it('mentions TikTok, Instagram, and Twitter/X', () => {
+  it('mentions TikTok, Instagram, Twitter/X, and the choice UX', () => {
     expect(USAGE_MESSAGE).toMatch(/tiktok/i);
     expect(USAGE_MESSAGE).toMatch(/instagram/i);
     expect(USAGE_MESSAGE).toMatch(/twitter|x/i);
+    expect(USAGE_MESSAGE).toMatch(/download|render/i);
+    expect(USAGE_MESSAGE).not.toMatch(/\/xrender/i);
+  });
+
+  it('exports choice prompt copy', () => {
+    expect(X_CHOICE_MESSAGE).toMatch(/download/i);
+    expect(X_CHOICE_MESSAGE).toMatch(/render/i);
   });
 });

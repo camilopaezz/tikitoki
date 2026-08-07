@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { createLogger } from '../util/logger.js';
 import { perJobDir, rmJobDir } from '../util/tmp.js';
-import type { Job, JobId, JobResult, Stage, StageCallback } from './types.js';
+import type { Job, JobId, JobMode, JobResult, Stage, StageCallback } from './types.js';
 
 export interface LifecycleOptions {
   userId: number;
   url: string;
+  mode?: JobMode;
   onStage?: StageCallback;
   worker: (job: Job, onStage: (stage: Stage) => Promise<void>) => Promise<JobResult>;
   deliver?: (result: JobResult, job: Job) => Promise<void>;
@@ -18,7 +19,12 @@ export interface LifecycleResult {
 
 export async function runJobLifecycle(opts: LifecycleOptions): Promise<LifecycleResult> {
   const jobId = randomUUID();
-  const job: Job = { jobId, userId: opts.userId, url: opts.url };
+  const job: Job = {
+    jobId,
+    userId: opts.userId,
+    url: opts.url,
+    mode: opts.mode ?? 'passthrough',
+  };
   const log = createLogger({ jobId, userId: opts.userId });
 
   perJobDir(jobId);

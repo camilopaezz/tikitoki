@@ -26,6 +26,13 @@
     }
   },
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/dist", "!**/data", "!**/cookies.txt"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/data",
+      "!**/cookies.txt",
+      "!**/docs/xrender-mocks"
+    ]
   }
 }

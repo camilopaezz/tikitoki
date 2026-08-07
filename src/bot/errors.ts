@@ -1,12 +1,23 @@
 import { AuthFailureError } from '../fetch/authFailure.js';
 import { OversizedVideoError } from '../fetch/downloadVideo.js';
 import { MixedCarouselError, SingleImageError } from '../fetch/dumpInstagramCarousel.js';
+import { TwitterSyndicationError } from '../fetch/fetchTwitterSyndication.js';
+import { TwitterChromeMapError } from '../fetch/mapTwitterChrome.js';
 import { NoVideoError } from '../fetch/noVideo.js';
 import { CooldownError } from '../job/cooldown.js';
 import { HourlyCapError } from '../job/hourlyCap.js';
+import { XRenderNotReadyError } from '../job/xrenderErrors.js';
+
+export { XRenderNotReadyError };
+
 export function userFacingMessage(err: unknown): string {
   if (err instanceof CooldownError) return err.message;
   if (err instanceof HourlyCapError) return err.message;
+  if (err instanceof XRenderNotReadyError) return err.message;
+  if (err instanceof TwitterChromeMapError) return err.message;
+  if (err instanceof TwitterSyndicationError) {
+    return "Couldn't load that post's card metadata. Try again later.";
+  }
   if (err instanceof MixedCarouselError) {
     return "This post mixes photos and videos, which isn't supported yet. Send a photo-only carousel or a reel.";
   }

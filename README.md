@@ -1,40 +1,69 @@
 # tikitoki
 
-A Telegram bot that downloads TikTok video posts and renders TikTok slideshow
-posts as MP4 files, staying under Telegram's upload limits. It also downloads
-Instagram reels, renders Instagram photo carousels as MP4 slideshows, and
-downloads Twitter/X video posts.
+**Paste a TikTok, Instagram, or X link in Telegram — get a clean MP4 back.**
 
-## What it does
+No watermarks to hunt for, no “open in browser” detours. Send the bot a post URL and it downloads or renders the media so you can save it, forward it, or share it elsewhere.
 
-- Paste a TikTok, Instagram, or Twitter/X link in a chat with the bot.
-- The bot fetches the post.
-- **TikTok video posts**, **Instagram reels**, and **Twitter/X videos** are
-  sent as-is.
-- **TikTok slideshow posts** and **Instagram photo carousels** are rendered into
-  an MP4 with black letterboxing, even slide timing, and a short crossfade.
-- Mixed Instagram carousels (photos + videos) and single-image posts are
-  rejected with a friendly message.
-- The bot updates a placeholder message through `Fetching` → `Rendering`
-  (slideshows/carousels only) → `Uploading`.
+---
 
-## Requirements
+## Features
 
-- Node.js 20+ (for local development)
-- `ffmpeg` and `yt-dlp` installed (the Docker image includes both)
-- A Telegram bot token from [@BotFather](https://t.me/botfather)
+| Platform | What you can do |
+|----------|------------------|
+| **TikTok** | Download videos · turn photo slideshows into MP4s |
+| **Instagram** | Download reels · turn photo carousels into MP4 slideshows |
+| **X (Twitter)** | Download the video **or** render a dark feed-card clip of the post |
 
-## Quick start with Docker Compose
+### TikTok
+- **Videos** — full post video as an MP4
+- **Photo slideshows** — stitched into one video with even timing and a short crossfade
+
+### Instagram
+- **Reels** — downloaded as MP4
+- **Photo carousels** — rendered as an MP4 slideshow (same idea as TikTok slides)
+- Mixed photo+video carousels and single images are not supported (the bot tells you clearly)
+
+### X / Twitter
+Paste an X link and pick what you want (no commands):
+
+- **Download video** — raw post video as MP4
+- **Render post** — feed-style card (avatar, name, text) with the video playing in the media area
+
+---
+
+## Self-hosting
+
+Run your own instance with Docker Compose.
+
+### Requirements
+- Docker + Docker Compose
+- A bot token from [@BotFather](https://t.me/botfather)
+- Optional: Netscape-format cookies for better access to restricted posts
+- Chromium is included in the image (needed for X feed-card render)
+
+### Quick start
 
 1. Clone the repo.
-2. Copy `.env.example` to `.env` and fill in `BOT_TOKEN`.
-3. Run:
+2. Copy `.env.example` to `.env` and set `BOT_TOKEN`.
+3. Start:
 
 ```bash
 docker compose up -d --build
 ```
 
-Example `docker-compose.yml`:
+Suggested layout:
+
+```
+.
+├── docker-compose.yml
+├── .env
+└── cookies/                 # optional
+    ├── cookies.txt          # TikTok
+    ├── instagram.txt
+    └── twitter.txt
+```
+
+Example `docker-compose.yml` environment:
 
 ```yaml
 services:
@@ -43,11 +72,11 @@ services:
     container_name: tikitoki
     restart: unless-stopped
     environment:
-      - BOT_TOKEN=${BOT_TOKEN}                   # from @BotFather
+      - BOT_TOKEN=${BOT_TOKEN}
       - TIKTOKI_COOKIES_PATH=/app/cookies/cookies.txt
       - INSTAGRAM_COOKIES_PATH=/app/cookies/instagram.txt
       - TWITTER_COOKIES_PATH=/app/cookies/twitter.txt
-      - OPERATOR_CHAT_ID=${OPERATOR_CHAT_ID:-}   # alerts on auth failures
+      - OPERATOR_CHAT_ID=${OPERATOR_CHAT_ID:-}
       - CONCURRENCY=${CONCURRENCY:-2}
       - COOLDOWN_SECONDS=${COOLDOWN_SECONDS:-30}
       - HOURLY_CAP=${HOURLY_CAP:-60}
@@ -55,100 +84,58 @@ services:
       - CROSSFADE_SECONDS=${CROSSFADE_SECONDS:-0.4}
       - SILENT_SLIDE_SECONDS=${SILENT_SLIDE_SECONDS:-3}
     volumes:
-      - ./cookies:/app/cookies:ro    # optional, for authenticated TikTok/Instagram/Twitter access
+      - ./cookies:/app/cookies:ro
 ```
 
-Expected directory layout:
+### Cookies (optional but recommended)
 
-```
-.
-├── docker-compose.yml
-├── .env
-└── cookies/
-    ├── cookies.txt      # Netscape-format TikTok cookies (optional)
-    ├── instagram.txt    # Netscape-format Instagram cookies (optional)
-    └── twitter.txt      # Netscape-format Twitter/X cookies (optional)
-```
+Platforms often block anonymous downloads. Export Netscape `cookies.txt` from a browser (e.g. “Get cookies.txt LOCALLY”) while logged into a throwaway account:
 
-The bot starts polling Telegram. Send it a TikTok, Instagram, or Twitter/X
-link to try it out.
+| Platform | File | Env var |
+|----------|------|---------|
+| TikTok | `cookies/cookies.txt` | `TIKTOKI_COOKIES_PATH` |
+| Instagram | `cookies/instagram.txt` | `INSTAGRAM_COOKIES_PATH` |
+| X | `cookies/twitter.txt` | `TWITTER_COOKIES_PATH` |
 
-## Cookies for private/restricted posts
-
-TikTok, Instagram, and Twitter/X can block unauthenticated requests. For best
-results, export cookies from a dedicated throwaway account for each platform.
-Cookies use the Netscape `cookies.txt` format.
-
-### TikTok cookies
-
-1. Install a browser extension that exports Netscape-format `cookies.txt`
-   (e.g., "Get cookies.txt LOCALLY").
-2. Log in to TikTok in that browser.
-3. Export cookies to `cookies/cookies.txt` in the project root.
-4. Set `TIKTOKI_COOKIES_PATH=/app/cookies/cookies.txt` in `.env`.
-
-### Instagram cookies
-
-1. Install a browser extension that exports Netscape-format `cookies.txt`
-   (e.g., "Get cookies.txt LOCALLY").
-2. Log in to Instagram in that browser.
-3. Export cookies to a separate file, e.g. `cookies/instagram.txt` in the
-   project root (keep it separate from the TikTok cookies file).
-4. Set `INSTAGRAM_COOKIES_PATH=/app/cookies/instagram.txt` in `.env`.
-
-### Twitter/X cookies
-
-1. Install a browser extension that exports Netscape-format `cookies.txt`
-   (e.g., "Get cookies.txt LOCALLY").
-2. Log in to X (Twitter) in that browser.
-3. Export cookies to a separate file, e.g. `cookies/twitter.txt` in the
-   project root.
-4. Set `TWITTER_COOKIES_PATH=/app/cookies/twitter.txt` in `.env`.
-
-Without cookies, the bot runs in public-only mode and may fail on many posts.
-
-## Environment variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `BOT_TOKEN` | yes | — | Telegram bot token |
-| `TIKTOKI_COOKIES_PATH` | no | — | Path to TikTok `cookies.txt` inside the container |
-| `INSTAGRAM_COOKIES_PATH` | no | — | Path to Instagram `cookies.txt` inside the container |
-| `TWITTER_COOKIES_PATH` | no | — | Path to Twitter/X `cookies.txt` inside the container |
-| `OPERATOR_CHAT_ID` | no | — | Telegram chat ID to alert on auth failures |
-| `CONCURRENCY` | no | 2 | Max simultaneous jobs |
-| `COOLDOWN_SECONDS` | no | 30 | Per-user submission cooldown |
-| `HOURLY_CAP` | no | 60 | Global jobs per hour |
-| `TARGET_SIZE_MB` | no | 45 | Target output size (under Telegram's 50 MB cap) |
-| `CROSSFADE_SECONDS` | no | 0.4 | Slide transition duration |
-| `SILENT_SLIDE_SECONDS` | no | 3 | Slide duration when a slideshow has no audio |
+Without cookies the bot still works for many public posts, but more links will fail.
 
 ## Development
 
 ```bash
-npm install
-npm run dev          # tsx src/index.ts
-npm test             # unit tests
-npm run test:integration  # CLI/network integration tests
-npm run typecheck
-npm run lint
+pnpm install   # or npm install
+pnpm dev       # local bot (needs .env)
+pnpm test
+pnpm run test:integration
+pnpm typecheck
+pnpm lint
 ```
+
+Needs Node 20+, `ffmpeg`, `yt-dlp`, and Chromium/Chrome for X feed-card renders.
+
+---
 
 ## Troubleshooting
 
-- **"Couldn't fetch that post right now"** — Usually means TikTok, Instagram,
-  or Twitter/X served an auth challenge. If `OPERATOR_CHAT_ID` is set, the
-  operator receives an alert. Re-export the relevant platform's `cookies.txt`
-  and restart the bot.
-- **"This post mixes photos and videos, which isn't supported yet"** — The
-  Instagram post is a mixed carousel. Send a photo-only carousel or a reel
-  instead.
-- **"Single images aren't supported"** — The Instagram post is a single image.
-  Send a carousel or a reel instead.
-- **Video too large** — The passthrough MP4 exceeded `TARGET_SIZE_MB`. The bot
-  does not re-encode video posts; try a lower-resolution share.
-- **720p retry** — Very long slideshows at full resolution may be downscaled to
-  720p to stay under the size cap. This is normal.
+| Message / issue | What to try |
+|-----------------|-------------|
+| “Couldn’t fetch that post right now” | Auth challenge — refresh platform cookies and restart |
+| Mixed photos + videos (Instagram) | Use a photo-only carousel or a reel |
+| Single images not supported | Send a carousel or reel instead |
+| Video too large | Source is over `TARGET_SIZE_MB`; try another share/quality |
+| Long slideshows look 720p | Automatic downscale to stay under size limits — expected |
+
+---
+
+## Thanks
+
+This project relies on:
+
+- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — downloading video from TikTok, Instagram, and X
+- **[FFmpeg](https://ffmpeg.org/)** — slideshows, feed-card composites, and encoding
+
+Huge thanks to the maintainers and contributors of both.
+
+---
 
 ## License
 

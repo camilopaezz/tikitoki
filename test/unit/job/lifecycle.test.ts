@@ -52,4 +52,19 @@ describe('runJobLifecycle', () => {
       runJobLifecycle({ userId: 42, url: 'http://example.com', worker }),
     ).rejects.toThrow('boom');
   });
+
+  it('defaults job.mode to passthrough and forwards explicit xrender', async () => {
+    const worker = vi.fn().mockResolvedValue({ outputPath: '/tmp/out.mp4' });
+
+    await runJobLifecycle({ userId: 1, url: 'https://x.com/u/status/1', worker });
+    expect(worker.mock.calls[0][0].mode).toBe('passthrough');
+
+    await runJobLifecycle({
+      userId: 1,
+      url: 'https://x.com/u/status/1',
+      mode: 'xrender',
+      worker,
+    });
+    expect(worker.mock.calls[1][0].mode).toBe('xrender');
+  });
 });

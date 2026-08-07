@@ -1,7 +1,7 @@
 {
   "name": "tikitoki",
-  "version": "1.2.0",
-  "description": "Telegram bot that downloads TikTok, Instagram, and Twitter/X videos and renders slideshows to MP4",
+  "version": "1.3.0",
+  "description": "Telegram bot that downloads TikTok, Instagram, and Twitter/X videos, renders slideshows, and X feed cards",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -16,7 +16,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "xrender:frames": "tsx --env-file=.env scripts/xrender-visual-suite.ts"
   },
   "dependencies": {
     "grammy": "^1.30.0",

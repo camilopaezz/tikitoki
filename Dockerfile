@@ -12,8 +12,19 @@ RUN pnpm build
 
 FROM node:22-alpine
 
-# Install ffmpeg and dependencies required by yt-dlp.
-RUN apk add --no-cache ffmpeg ca-certificates curl python3 py3-mutagen
+# ffmpeg + yt-dlp deps; chromium for /xrender feed-card chrome screenshots.
+RUN apk add --no-cache \
+    ffmpeg \
+    ca-certificates \
+    curl \
+    python3 \
+    py3-mutagen \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ttf-freefont \
+    font-noto-emoji
 
 # Install the latest yt-dlp release into /usr/local/bin.
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
