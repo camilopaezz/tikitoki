@@ -4,8 +4,7 @@ import {
   isTwitterUrl,
   parseIntake,
   USAGE_MESSAGE,
-  XRENDER_TWITTER_ONLY_MESSAGE,
-  XRENDER_USAGE_MESSAGE,
+  X_CHOICE_MESSAGE,
 } from '../../../src/bot/intake.js';
 
 describe('extractPostUrl', () => {
@@ -91,69 +90,36 @@ describe('isTwitterUrl', () => {
 });
 
 describe('parseIntake', () => {
-  it('treats a plain X URL as passthrough', () => {
+  it('extracts a plain X URL without choosing a mode', () => {
     const url = 'https://x.com/user/status/123';
-    expect(parseIntake(url)).toEqual({
-      url,
-      mode: 'passthrough',
-      isXRenderCommand: false,
-    });
+    expect(parseIntake(url)).toEqual({ url });
   });
 
-  it('parses /xrender with trailing X URL', () => {
+  it('still extracts a URL when text includes /xrender', () => {
     const url = 'https://x.com/user/status/123';
-    expect(parseIntake(`/xrender ${url}`)).toEqual({
-      url,
-      mode: 'xrender',
-      isXRenderCommand: true,
-    });
-  });
-
-  it('parses /xrender@BotName with URL', () => {
-    const url = 'https://twitter.com/user/status/99';
-    expect(parseIntake(`/xrender@tikitoki_bot ${url}`)).toEqual({
-      url,
-      mode: 'xrender',
-      isXRenderCommand: true,
-    });
-  });
-
-  it('flags /xrender without a URL', () => {
-    expect(parseIntake('/xrender')).toEqual({
-      url: undefined,
-      mode: 'xrender',
-      isXRenderCommand: true,
-    });
-  });
-
-  it('is case-insensitive for the command', () => {
-    const url = 'https://x.com/i/status/1';
-    expect(parseIntake(`/XRENDER ${url}`).mode).toBe('xrender');
-  });
-
-  it('does not treat /xrenderer as the command', () => {
-    expect(parseIntake('/xrenderer https://x.com/u/status/1').isXRenderCommand).toBe(false);
+    expect(parseIntake(`/xrender ${url}`)).toEqual({ url });
   });
 
   it('returns no URL for unrelated text', () => {
-    expect(parseIntake('hello')).toEqual({
-      url: undefined,
-      mode: 'passthrough',
-      isXRenderCommand: false,
-    });
+    expect(parseIntake('hello')).toEqual({ url: undefined });
+  });
+
+  it('returns no URL for /xrender alone', () => {
+    expect(parseIntake('/xrender')).toEqual({ url: undefined });
   });
 });
 
 describe('USAGE_MESSAGE', () => {
-  it('mentions TikTok, Instagram, Twitter/X, and /xrender', () => {
+  it('mentions TikTok, Instagram, Twitter/X, and the choice UX', () => {
     expect(USAGE_MESSAGE).toMatch(/tiktok/i);
     expect(USAGE_MESSAGE).toMatch(/instagram/i);
     expect(USAGE_MESSAGE).toMatch(/twitter|x/i);
-    expect(USAGE_MESSAGE).toMatch(/\/xrender/i);
+    expect(USAGE_MESSAGE).toMatch(/download|render/i);
+    expect(USAGE_MESSAGE).not.toMatch(/\/xrender/i);
   });
 
-  it('exports dedicated xrender help strings', () => {
-    expect(XRENDER_USAGE_MESSAGE).toMatch(/\/xrender/i);
-    expect(XRENDER_TWITTER_ONLY_MESSAGE).toMatch(/twitter|x/i);
+  it('exports choice prompt copy', () => {
+    expect(X_CHOICE_MESSAGE).toMatch(/download/i);
+    expect(X_CHOICE_MESSAGE).toMatch(/render/i);
   });
 });

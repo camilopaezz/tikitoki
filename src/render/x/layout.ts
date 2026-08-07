@@ -93,7 +93,6 @@ export function computeMediaSlotSize(
 export function layoutXPost(assets: XPostAssets): XPostLayout {
   const width = XRENDER_WIDTH;
   const padX = PAD_X;
-  const innerW = width - padX * 2;
   // Media + caption sit in the text column under the name (right of avatar).
   const textColX = padX + AVATAR + HEADER_GAP;
   const textColW = even(width - textColX - padX);

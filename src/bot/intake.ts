@@ -1,19 +1,9 @@
-export type JobMode = 'passthrough' | 'xrender';
-
 export interface ParsedIntake {
   /** Absent when the message is not a usable job request. */
   url?: string;
-  mode: JobMode;
-  /**
-   * True when the user invoked `/xrender` (with or without a URL).
-   * Distinguishes "plain paste with no URL" from "command with no URL".
-   */
-  isXRenderCommand: boolean;
 }
 
 const POST_URL_RE = /https?:\/\/[^\s]*(?:tiktok\.com|instagram\.com|twitter\.com|x\.com)\/[^\s]+/i;
-
-const XRENDER_CMD_RE = /^\/xrender(?:@\S+)?(?:\s+|$)/i;
 
 const TWITTER_HOST_RE = /(?:twitter\.com|x\.com)/i;
 
@@ -27,24 +17,21 @@ export function isTwitterUrl(url: string): boolean {
 }
 
 /**
- * Parse a user message into job mode + optional post URL.
- * `/xrender` and `/xrender@BotName` enable chrome-render mode for Twitter/X.
- * Plain links stay passthrough.
+ * Parse a user message into an optional post URL.
+ * Mode (download vs feed-card render) is chosen via inline buttons for X links.
  */
 export function parseIntake(text: string): ParsedIntake {
-  const trimmed = text.trim();
-  const isXRenderCommand = XRENDER_CMD_RE.test(trimmed);
-  const url = extractPostUrl(trimmed);
-  return {
-    url,
-    mode: isXRenderCommand ? 'xrender' : 'passthrough',
-    isXRenderCommand,
-  };
+  const url = extractPostUrl(text.trim());
+  return { url };
 }
 
 export const USAGE_MESSAGE =
-  "Send me a TikTok, Instagram, or Twitter/X link and I'll download or render it as an MP4. Use /xrender <Twitter/X video URL> for a feed-card render.";
+  "Send me a TikTok, Instagram, or Twitter/X link. For X posts I'll ask whether to download the video or render a feed card.";
 
-export const XRENDER_USAGE_MESSAGE = 'Usage: /xrender <Twitter/X video post URL>';
+export const X_CHOICE_MESSAGE =
+  'X post detected. Download the video, or render a feed card?';
 
-export const XRENDER_TWITTER_ONLY_MESSAGE = '/xrender only works with Twitter/X links.';
+export const X_CHOICE_EXPIRED_MESSAGE =
+  'That choice expired. Send the X link again.';
+
+export const X_CHOICE_WRONG_USER_MESSAGE = 'This choice is not for you.';

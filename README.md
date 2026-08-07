@@ -3,28 +3,28 @@
 A Telegram bot that downloads TikTok video posts and renders TikTok slideshow
 posts as MP4 files, staying under Telegram's upload limits. It also downloads
 Instagram reels, renders Instagram photo carousels as MP4 slideshows, and
-downloads Twitter/X video posts.
+handles Twitter/X video posts (download or feed-card render).
 
 ## What it does
 
 - Paste a TikTok, Instagram, or Twitter/X link in a chat with the bot.
-- The bot fetches the post.
-- **TikTok video posts**, **Instagram reels**, and **Twitter/X videos** are
-  sent as-is.
-- **`/xrender <Twitter/X URL>`** renders a dark feed-card MP4 with the post
-  video playing in the media hole (requires Chromium for chrome raster).
+- **TikTok video posts** and **Instagram reels** are sent as-is.
+- **Twitter/X links** show two buttons:
+  - **Download video** — passthrough MP4 (yt-dlp).
+  - **Render post** — dark feed-card MP4 with the video in the media hole
+    (requires Chromium for chrome raster).
 - **TikTok slideshow posts** and **Instagram photo carousels** are rendered into
   an MP4 with black letterboxing, even slide timing, and a short crossfade.
 - Mixed Instagram carousels (photos + videos) and single-image posts are
   rejected with a friendly message.
 - The bot updates a placeholder message through `Fetching` → `Rendering`
-  (slideshows/carousels/**`/xrender`**) → `Uploading`.
+  (slideshows/carousels/X feed-card) → `Uploading`.
 
 ## Requirements
 
 - Node.js 20+ (for local development)
 - `ffmpeg` and `yt-dlp` installed (the Docker image includes both)
-- `chromium` (or Chrome) for **`/xrender`** chrome raster (included in Docker)
+- `chromium` (or Chrome) for X feed-card render (included in Docker)
 - A Telegram bot token from [@BotFather](https://t.me/botfather)
 
 ## Quick start with Docker Compose

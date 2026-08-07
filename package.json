@@ -1,7 +1,7 @@
 {
   "name": "tikitoki",
   "version": "1.3.0",
-  "description": "Telegram bot that downloads TikTok, Instagram, and Twitter/X videos, renders slideshows, and /xrender feed cards",
+  "description": "Telegram bot that downloads TikTok, Instagram, and Twitter/X videos, renders slideshows, and X feed cards",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
