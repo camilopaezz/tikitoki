@@ -12,10 +12,11 @@
  *
  * Extra URLs on the CLI are appended to the default suite.
  */
+
+import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { loadConfig } from '../src/config/index.js';
 import { parseTwitterStatusId } from '../src/fetch/parseTwitterStatusId.js';
 import { createPipeline } from '../src/pipeline.js';
@@ -77,14 +78,9 @@ async function renderFrame(
   console.log(`  ${url}`);
 
   try {
-    let lastStage = '';
-    const result = await pipeline(
-      { jobId, userId: 0, url, mode: 'xrender' },
-      async (stage) => {
-        lastStage = stage;
-        console.log(`  stage ${stage}`);
-      },
-    );
+    const result = await pipeline({ jobId, userId: 0, url, mode: 'xrender' }, async (stage) => {
+      console.log(`  stage ${stage}`);
+    });
 
     const framePath = join(outDir, `${statusId}-frame.jpg`);
     await runProcess('ffmpeg', [
@@ -174,7 +170,9 @@ async function main() {
   console.log(`Summary: ${summaryPath}`);
   for (const r of results) {
     const mark = r.ok ? '✓' : '✗';
-    console.log(`  ${mark} ${r.statusId}${r.layout ? ` ${r.layout}` : ''}${r.error ? ` — ${r.error}` : ''}`);
+    console.log(
+      `  ${mark} ${r.statusId}${r.layout ? ` ${r.layout}` : ''}${r.error ? ` — ${r.error}` : ''}`,
+    );
   }
 
   if (fail > 0) process.exit(1);

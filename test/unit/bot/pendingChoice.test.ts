@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   encodeCallbackData,
   modeFromAction,
-  parseCallbackData,
   PendingChoiceStore,
+  parseCallbackData,
 } from '../../../src/bot/pendingChoice.js';
 
 describe('PendingChoiceStore', () => {

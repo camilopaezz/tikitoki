@@ -1,7 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { copyFile, mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { loadConfig } from '../src/config/index.js';
 import { createPipeline } from '../src/pipeline.js';
 import { runProcess } from '../src/process/run.js';
@@ -20,13 +20,10 @@ async function main() {
   console.log('url', url);
 
   try {
-    const result = await pipeline(
-      { jobId, userId: 0, url, mode: 'xrender' },
-      async (stage) => {
-        stages.push(stage);
-        console.log('stage', stage);
-      },
-    );
+    const result = await pipeline({ jobId, userId: 0, url, mode: 'xrender' }, async (stage) => {
+      stages.push(stage);
+      console.log('stage', stage);
+    });
 
     console.log('stages', stages);
     console.log('output', result.outputPath);

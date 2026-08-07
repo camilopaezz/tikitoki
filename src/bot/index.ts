@@ -18,8 +18,8 @@ import {
 import {
   encodeCallbackData,
   modeFromAction,
-  parseCallbackData,
   PendingChoiceStore,
+  parseCallbackData,
 } from './pendingChoice.js';
 import { sendPlaceholder } from './placeholder.js';
 import { sendVideo } from './send.js';

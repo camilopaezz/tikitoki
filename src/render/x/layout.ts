@@ -109,7 +109,11 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
   const nameBlockH = NAME_LINE + (textH > 0 ? TEXT_MARGIN_TOP + textH : 0);
   const headerH = Math.max(AVATAR, nameBlockH);
   const mediaTop = even(PAD_TOP + headerH + GAP_HEADER_MEDIA);
-  const media = computeMediaSlotSize(textColW, assets.primaryVideo.width, assets.primaryVideo.height);
+  const media = computeMediaSlotSize(
+    textColW,
+    assets.primaryVideo.width,
+    assets.primaryVideo.height,
+  );
 
   const mediaSlot = {
     // Align with text column left (X feed). Measured green hole refines X/Y.
@@ -128,9 +132,7 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
   if (assets.quote) {
     quoteTop = mediaTop + media.h + GAP_MEDIA_QUOTE;
     // Upper-bound quote height (flow sizes naturally; we only need window room).
-    const qTextH = assets.quote.text.displayText
-      ? 3 * QUOTE_TEXT_LINE
-      : 0;
+    const qTextH = assets.quote.text.displayText ? 3 * QUOTE_TEXT_LINE : 0;
     const qHeader = Math.max(QUOTE_AVATAR, QUOTE_NAME_LINE);
     const textBlockH = qHeader + (qTextH ? QUOTE_TEXT_MARGIN_TOP + qTextH : 0);
     const nImgs = assets.quote.images.length;

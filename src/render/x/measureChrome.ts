@@ -65,11 +65,9 @@ export async function measureChromePng(
   }
 
   const rawPath = join(pngPath, '..', 'chrome.raw.rgba');
-  await runProcess(
-    'ffmpeg',
-    ['-y', '-i', pngPath, '-f', 'rawvideo', '-pix_fmt', 'rgba', rawPath],
-    { jobId: opts?.jobId },
-  );
+  await runProcess('ffmpeg', ['-y', '-i', pngPath, '-f', 'rawvideo', '-pix_fmt', 'rgba', rawPath], {
+    jobId: opts?.jobId,
+  });
   const buf = await readFile(rawPath);
 
   let minY = height;
@@ -171,16 +169,7 @@ export async function cropChromePng(
   const tmp = join(pngPath, '..', 'chrome.cropped.png');
   await runProcess(
     'ffmpeg',
-    [
-      '-y',
-      '-i',
-      pngPath,
-      '-vf',
-      `crop=${cropW}:${cropH}:0:0,setsar=1`,
-      '-frames:v',
-      '1',
-      tmp,
-    ],
+    ['-y', '-i', pngPath, '-vf', `crop=${cropW}:${cropH}:0:0,setsar=1`, '-frames:v', '1', tmp],
     { jobId: opts?.jobId },
   );
   await rename(tmp, pngPath);
