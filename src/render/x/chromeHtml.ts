@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import type { XPostAssets } from '../../fetch/downloadXAssets.js';
 import { truncateTweetText } from '../../fetch/truncateTweetText.js';
+import { X_LAYOUT_CONSTANTS } from './layout.js';
 import type { XPostLayout } from './types.js';
 
 function esc(s: string): string {
@@ -31,27 +32,23 @@ function badge(verified: boolean): string {
 }
 
 /**
- * Build a full-size HTML feed card. The green media hole is **absolutely**
- * positioned at `layout.mediaSlot` so ffmpeg overlay coords match the hole.
+ * Build feed-card chrome as **document flow** (not absolute Y for the hole).
+ *
+ * Chromium wraps caption text for real; the green media hole sits after the
+ * header in normal flow. `renderXPost` measures the hole from the PNG so
+ * ffmpeg overlay Y matches — no chars-per-line guessing.
  */
 export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): string {
   const { width, height } = layout.canvas;
   const outerText = truncateTweetText(assets.outer.text.displayText, 3, 180);
   const slot = layout.mediaSlot;
   const padX = layout.padX;
-  // Keep in sync with layout.ts PAD_TOP / AVATAR / NAME_LINE / TEXT_MARGIN_TOP.
-  const headerTop = 33;
-  const avatarSize = 72;
-  const nameLine = 44; // 36px font / 44px line-height
-  // Text must not extend into the media hole; height is the gap under the name row.
-  const textMaxH = Math.max(0, slot.y - headerTop - nameLine - 8 - 8);
+  // Header + quote span the full content column; media may be narrower + centered.
+  const colW = width - padX * 2;
+  const { PAD_TOP, PAD_BOTTOM, AVATAR, HEADER_GAP, GAP_HEADER_MEDIA } = X_LAYOUT_CONSTANTS;
 
   let quoteBlock = '';
-  if (
-    assets.quote &&
-    layout.sections.quoteTop !== undefined &&
-    layout.sections.quoteH !== undefined
-  ) {
+  if (assets.quote) {
     const q = assets.quote;
     const qText = truncateTweetText(q.text.displayText, 3, 160);
     const imgs = q.images
@@ -63,7 +60,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
       })
       .join('');
     quoteBlock = `
-      <div class="quote" style="left:${padX}px;top:${layout.sections.quoteTop}px;width:${slot.w}px;height:${layout.sections.quoteH}px">
+      <div class="quote" style="width:${colW}px">
         <div class="quote-head">
           ${avatarHtml(q.author.avatarPath, 40, q.author.name)}
           <span class="name">${esc(q.author.name)}</span>
@@ -84,6 +81,8 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
     width: ${width}px;
+    /* Tall enough upper bound; content may be shorter — measured later. */
+    min-height: ${height}px;
     height: ${height}px;
     margin: 0;
     padding: 0;
@@ -94,18 +93,18 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     overflow: hidden;
   }
   .card {
-    position: relative;
     width: ${width}px;
-    height: ${height}px;
+    min-height: ${height}px;
     background: #000;
+    padding: ${PAD_TOP}px ${padX}px ${PAD_BOTTOM}px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
   .header {
-    position: absolute;
-    left: ${padX}px;
-    top: ${headerTop}px;
-    width: ${slot.w}px;
+    width: ${colW}px;
     display: flex;
-    gap: 16px;
+    gap: ${HEADER_GAP}px;
     align-items: flex-start;
   }
   .avatar {
@@ -130,27 +129,30 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     color: #e6e9ea;
     white-space: pre-wrap;
     word-break: break-word;
-    /* Clip to region above media hole so text never pushes hole */
-    max-height: ${textMaxH}px;
-    overflow: hidden;
+    /* No max-height — hole follows text in flow; measure step reads Y. */
   }
-  /* Exact ffmpeg mediaSlot rect — must match overlay x/y/w/h.
-     Pure #00FF00 only (no border/shadow on the keyed fill). Anti-aliased
-     green under a gray border is what left a green ring after chromakey. */
+  .media-wrap {
+    position: relative;
+    width: ${slot.w}px;
+    height: ${slot.h}px;
+    margin-top: ${GAP_HEADER_MEDIA}px;
+    /* Align with caption text (right of avatar), not the card's left pad. */
+    margin-left: ${AVATAR + HEADER_GAP}px;
+    align-self: flex-start;
+    flex-shrink: 0;
+  }
+  /* Pure #00FF00 fill for chromakey (no border on the keyed surface). */
   .media-hole {
     position: absolute;
-    left: ${slot.x}px;
-    top: ${slot.y}px;
+    inset: 0;
     width: ${slot.w}px;
     height: ${slot.h}px;
     border-radius: ${slot.cornerRadius}px;
     background: #00ff00;
   }
-  /* Gray ring drawn on top of the hole edge; stays after chromakey. */
   .media-ring {
     position: absolute;
-    left: ${slot.x}px;
-    top: ${slot.y}px;
+    inset: 0;
     width: ${slot.w}px;
     height: ${slot.h}px;
     border-radius: ${slot.cornerRadius}px;
@@ -159,17 +161,25 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     pointer-events: none;
   }
   .quote {
-    position: absolute;
+    margin-top: 24px;
     border: 2px solid #323639;
     border-radius: 44px;
     padding: 20px;
     overflow: hidden;
     background: #000;
+    flex-shrink: 0;
   }
   .quote-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .quote .avatar { width: 40px; height: 40px; }
   .quote .name, .quote .handle { font-size: 30px; line-height: 38px; }
-  .qtext { margin-top: 8px; font-size: 34px; line-height: 42px; color: #e6e9ea; }
+  .qtext {
+    margin-top: 8px;
+    font-size: 34px;
+    line-height: 42px;
+    color: #e6e9ea;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
   .qimgs {
     margin-top: 12px;
     display: grid;
@@ -185,7 +195,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
 <body>
   <article class="card">
     <div class="header">
-      ${avatarHtml(assets.outer.author.avatarPath, avatarSize, assets.outer.author.name)}
+      ${avatarHtml(assets.outer.author.avatarPath, AVATAR, assets.outer.author.name)}
       <div class="main">
         <div class="name-row">
           <span class="name">${esc(assets.outer.author.name)}</span>
@@ -195,8 +205,10 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
         ${outerText ? `<p class="text">${esc(outerText)}</p>` : ''}
       </div>
     </div>
-    <div class="media-hole" data-media-hole="1" data-x="${slot.x}" data-y="${slot.y}" data-w="${slot.w}" data-h="${slot.h}"></div>
-    <div class="media-ring" aria-hidden="true"></div>
+    <div class="media-wrap">
+      <div class="media-hole" data-media-hole="1" data-w="${slot.w}" data-h="${slot.h}"></div>
+      <div class="media-ring" aria-hidden="true"></div>
+    </div>
     ${quoteBlock}
   </article>
 </body>

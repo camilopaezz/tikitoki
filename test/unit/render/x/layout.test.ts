@@ -29,10 +29,22 @@ describe('computeMediaSlotSize', () => {
     expect(s.h).toBeLessThan(s.w);
   });
 
-  it('uses cover for tall video', () => {
-    const s = computeMediaSlotSize(992, 720, 1280);
-    expect(s.fit).toBe('cover');
-    expect(s.h).toBeGreaterThan(s.w * 0.9);
+  it('contains tall video: full frame, reduced width under feed max height', () => {
+    // Text-column width (~904) after avatar indent.
+    const s = computeMediaSlotSize(904, 720, 1280);
+    expect(s.fit).toBe('contain');
+    // Max box H = 904 * 5/4 = 1130; 9:16 → w = 1130 * 9/16 ≈ 636.
+    expect(s.h).toBe(1130);
+    expect(s.w).toBeLessThan(904);
+    expect(s.w).toBeGreaterThan(500);
+    expect(s.w / s.h).toBeCloseTo(720 / 1280, 1);
+  });
+
+  it('fills text-column width for landscape', () => {
+    const s = computeMediaSlotSize(904, 1280, 720);
+    expect(s.fit).toBe('contain');
+    expect(s.w).toBe(904);
+    expect(s.h).toBeLessThan(s.w);
   });
 });
 
@@ -41,8 +53,11 @@ describe('layoutXPost', () => {
     const layout = layoutXPost(assets());
     expect(layout.canvas.width).toBe(XRENDER_WIDTH);
     expect(layout.canvas.height % 2).toBe(0);
-    expect(layout.mediaSlot.x).toBe(layout.padX);
-    expect(layout.mediaSlot.w + layout.padX * 2).toBe(XRENDER_WIDTH);
+    // Media aligns with text column (right of avatar), not card padX.
+    expect(layout.mediaSlot.x).toBeGreaterThan(layout.padX);
+    expect(layout.mediaSlot.w + layout.mediaSlot.x + layout.padX).toBeLessThanOrEqual(
+      XRENDER_WIDTH,
+    );
     expect(layout.sections.quoteTop).toBeUndefined();
   });
 

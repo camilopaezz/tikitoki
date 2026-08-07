@@ -49,6 +49,24 @@ describe('truncateTweetText', () => {
     expect(truncateTweetText('Watch this https://t.co/xyz')).toBe('Watch this');
   });
 
+  it('preserves hard line breaks (does not flatten multi-line captions)', () => {
+    const multi = '“🇪🇺🇺🇦🇹🇼”\n“From France”\n“I hate the proletariat”';
+    expect(truncateTweetText(multi)).toBe(multi);
+  });
+
+  it('preserves a blank line between paragraphs (X feed style)', () => {
+    const withGap =
+      'Entra una chica sefardí para el Departamento de Finanzas de la empresa.\n\nMi compañero depravado:';
+    expect(truncateTweetText(withGap)).toBe(withGap);
+    expect(truncateTweetText(withGap)).toContain('\n\n');
+  });
+
+  it('caps hard lines at maxLines', () => {
+    const out = truncateTweetText('a\nb\nc\nd', 3, 140);
+    expect(out.split('\n')).toHaveLength(3);
+    expect(out.endsWith('…')).toBe(true);
+  });
+
   it('appends ellipsis when over maxChars', () => {
     const long = 'word '.repeat(50).trim();
     const out = truncateTweetText(long, 3, 40);

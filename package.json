@@ -16,7 +16,8 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "xrender:frames": "tsx --env-file=.env scripts/xrender-visual-suite.ts"
   },
   "dependencies": {
     "grammy": "^1.30.0",

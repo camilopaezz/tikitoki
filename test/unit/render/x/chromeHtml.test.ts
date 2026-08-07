@@ -20,17 +20,18 @@ const base: XPostAssets = {
 };
 
 describe('buildChromeHtml', () => {
-  it('includes chroma media hole at exact layout coords and no duration/mute', () => {
+  it('uses flow layout with fixed media size and chromakey hole (no absolute Y)', () => {
     const layout = layoutXPost(base);
     const html = buildChromeHtml(base, layout);
     const slot = layout.mediaSlot;
     expect(html).toContain('data-media-hole');
-    expect(html).toContain(`left: ${slot.x}px`);
-    expect(html).toContain(`top: ${slot.y}px`);
+    expect(html).toContain('class="media-wrap"');
     expect(html).toContain(`width: ${slot.w}px`);
     expect(html).toContain(`height: ${slot.h}px`);
-    expect(html).toContain(`data-x="${slot.x}"`);
-    expect(html).toContain(`data-y="${slot.y}"`);
+    expect(html).toContain(`data-w="${slot.w}"`);
+    expect(html).toContain(`data-h="${slot.h}"`);
+    // Hole follows text in flow — not positioned with layout-estimated top.
+    expect(html).not.toContain('data-y=');
     expect(html).toContain('brandon*');
     expect(html).toContain('@brndxix');
     expect(html).toContain('#1d9bf0'); // verified badge
@@ -38,7 +39,7 @@ describe('buildChromeHtml', () => {
     expect(html).not.toMatch(/duration|mute|0:12|00:12/i);
   });
 
-  it('renders quote text card', () => {
+  it('renders quote text card in flow (no absolute top)', () => {
     const assets: XPostAssets = {
       ...base,
       layoutKind: 'video_quotes',
@@ -52,5 +53,6 @@ describe('buildChromeHtml', () => {
     expect(html).toContain('She needs a Bbl');
     expect(html).toContain('@kbbetaV2');
     expect(html).toContain('class="quote"');
+    expect(html).not.toMatch(/class="quote"[^>]*top:/);
   });
 });

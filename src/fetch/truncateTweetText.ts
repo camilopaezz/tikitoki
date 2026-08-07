@@ -17,24 +17,53 @@ export function stripTcoUrls(text: string): string {
 
 /**
  * Truncate tweet text for feed-card chrome (~2–3 lines).
+ * Keeps hard line breaks **and blank lines** (paragraph gaps in X captions).
+ * Collapses only horizontal whitespace / runs of empty lines.
  * Prefers a word boundary when maxChars cuts mid-word.
  */
 export function truncateTweetText(text: string, maxLines = 3, maxChars = 140): string {
-  const normalized = stripTcoUrls(text).replace(/\s+/g, ' ').trim();
-  if (!normalized) return '';
+  const stripped = stripTcoUrls(text);
+  if (!stripped) return '';
 
-  const byLines = normalized.split(/\n+/).slice(0, maxLines).join('\n');
-  let candidate = byLines.length <= maxChars ? byLines : byLines.slice(0, maxChars);
-
-  if (candidate.length < normalized.length) {
-    // Avoid ugly mid-word cuts when we sliced by chars.
-    if (candidate.length === maxChars) {
-      const lastSpace = candidate.lastIndexOf(' ');
-      if (lastSpace > maxChars * 0.6) {
-        candidate = candidate.slice(0, lastSpace);
+  // Split on single newlines so "" between paragraphs survives (X blank lines).
+  const rawLines = stripped.split('\n').map((l) => l.replace(/[ \t]+/g, ' ').trim());
+  // Drop leading/trailing empties; collapse consecutive blanks to one.
+  const hardLines: string[] = [];
+  for (const line of rawLines) {
+    if (line === '') {
+      if (hardLines.length > 0 && hardLines[hardLines.length - 1] !== '') {
+        hardLines.push('');
       }
+      continue;
     }
-    candidate = `${candidate.replace(/[….\s]+$/u, '')}…`;
+    hardLines.push(line);
+  }
+  while (hardLines.length && hardLines[hardLines.length - 1] === '') {
+    hardLines.pop();
+  }
+  if (!hardLines.length) return '';
+
+  const kept = hardLines.slice(0, maxLines);
+  // Don't end a truncated slice on a blank line.
+  while (kept.length && kept[kept.length - 1] === '') {
+    kept.pop();
+  }
+  let candidate = kept.join('\n');
+  const truncatedByLines = hardLines.length > maxLines;
+
+  if (candidate.length > maxChars) {
+    candidate = candidate.slice(0, maxChars);
+    const lastSpace = candidate.lastIndexOf(' ');
+    const lastNl = candidate.lastIndexOf('\n');
+    const cut = Math.max(lastSpace, lastNl);
+    if (cut > maxChars * 0.6) {
+      candidate = candidate.slice(0, cut);
+    }
+    return `${candidate.replace(/[….\s]+$/u, '')}…`;
+  }
+
+  if (truncatedByLines) {
+    return `${candidate.replace(/[….\s]+$/u, '')}…`;
   }
 
   return candidate;

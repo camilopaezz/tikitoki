@@ -14,8 +14,16 @@ const assets: XPostAssets = {
 };
 
 describe('renderXPost', () => {
-  it('screenshots chrome and runs two-pass ffmpeg', async () => {
+  it('screenshots, measures hole, crops, then two-pass ffmpeg', async () => {
     const screenshotFn = vi.fn().mockResolvedValue('/tmp/job/xchrome/chrome.png');
+    const measureFn = vi.fn().mockResolvedValue({
+      x: 44,
+      y: 120,
+      contentHeight: 900,
+      greenW: 992,
+      greenH: 558,
+    });
+    const cropFn = vi.fn().mockResolvedValue(undefined);
     const runFfmpegFn = vi.fn().mockResolvedValue({ stdout: '', stderr: '', code: 0 });
 
     const result = await renderXPost({
@@ -24,11 +32,15 @@ describe('renderXPost', () => {
       jobDir: '/tmp/job',
       targetSizeMb: 45,
       screenshotFn,
+      measureFn,
+      cropFn,
       runFfmpegFn,
     });
 
     expect(result.outputPath).toBe('/tmp/job/xrender.mp4');
     expect(screenshotFn).toHaveBeenCalledOnce();
+    expect(measureFn).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', { jobId: 'jx' });
+    expect(cropFn).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', 1080, 900, { jobId: 'jx' });
     expect(runFfmpegFn).toHaveBeenCalledTimes(2);
 
     const pass1 = runFfmpegFn.mock.calls[0][0] as string[];
@@ -38,6 +50,8 @@ describe('renderXPost', () => {
     expect(pass2).toContain('2');
     expect(pass2).toContain('/tmp/v.mp4');
     expect(pass2).toContain('/tmp/job/xchrome/chrome.png');
+    // Overlay uses measured media Y, not the placeholder estimate.
+    expect(pass2.join(' ')).toContain('overlay=44:120');
     expect(pass2.join(' ')).toContain('filter_complex');
   });
 });

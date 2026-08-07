@@ -6,7 +6,9 @@ import { computeBitrateBudget } from '../bitrate.js';
 import { buildChromeHtml } from './chromeHtml.js';
 import { buildXOverlayFiltergraph } from './filtergraph.js';
 import { layoutXPost } from './layout.js';
+import { cropChromePng, measureChromePng } from './measureChrome.js';
 import { screenshotChrome } from './screenshotChrome.js';
+import type { XPostLayout } from './types.js';
 
 export interface RenderXPostOptions {
   jobId: string;
@@ -16,6 +18,8 @@ export interface RenderXPostOptions {
   /** Injectables for tests */
   screenshotFn?: typeof screenshotChrome;
   runFfmpegFn?: typeof runFfmpeg;
+  measureFn?: typeof measureChromePng;
+  cropFn?: typeof cropChromePng;
 }
 
 export interface RenderXPostResult {
@@ -23,16 +27,22 @@ export interface RenderXPostResult {
 }
 
 /**
- * Layout → chrome PNG → ffmpeg overlay of primary video under chrome + source audio.
+ * Layout (media size) → flow chrome HTML → screenshot → measure green hole Y
+ * → crop chrome → ffmpeg overlay of primary video + source audio.
+ *
+ * Text wrap is owned by Chromium. We never place the media hole from a
+ * chars-per-line estimate (that caused empty gaps / clipped captions).
  */
 export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPostResult> {
   const log = createLogger({ jobId: opts.jobId });
   const screenshotFn = opts.screenshotFn ?? screenshotChrome;
   const runFfmpegFn = opts.runFfmpegFn ?? runFfmpeg;
+  const measureFn = opts.measureFn ?? measureChromePng;
+  const cropFn = opts.cropFn ?? cropChromePng;
 
-  const layout = layoutXPost(opts.assets);
+  let layout = layoutXPost(opts.assets);
   log.info(
-    `xrender layout ${layout.canvas.width}x${layout.canvas.height} media=${layout.mediaSlot.w}x${layout.mediaSlot.h} fit=${layout.mediaSlot.fit}`,
+    `xrender layout window ${layout.canvas.width}x${layout.canvas.height} media=${layout.mediaSlot.w}x${layout.mediaSlot.h} fit=${layout.mediaSlot.fit}`,
   );
 
   const html = buildChromeHtml(opts.assets, layout);
@@ -44,11 +54,24 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
     jobId: opts.jobId,
   });
 
+  // Chromium laid out real text — read where the green hole landed.
+  const measured = await measureFn(chromePath, { jobId: opts.jobId });
+  layout = applyMeasuredChrome(layout, measured);
+  log.info(
+    `xrender measured hole x=${layout.mediaSlot.x} y=${layout.mediaSlot.y} ` +
+      `canvas=${layout.canvas.width}x${layout.canvas.height} media=${layout.mediaSlot.w}x${layout.mediaSlot.h} ` +
+      `(green ${measured.greenW}x${measured.greenH})`,
+  );
+
+  if (layout.canvas.height < layout.canvas.width) {
+    // still fine
+  }
+  await cropFn(chromePath, layout.canvas.width, layout.canvas.height, { jobId: opts.jobId });
+
   const duration = opts.assets.primaryVideo.durationSec;
   let canvas = layout.canvas;
   let budget = computeBitrateBudget(opts.targetSizeMb ?? 45, duration, canvas.width, canvas.height);
 
-  // Downscale whole composition if bitrate floor missed (keep aspect).
   let filterLayout = layout;
   if (budget.needsDownscale) {
     const scale = 720 / canvas.width;
@@ -70,7 +93,6 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
   const outputPath = join(opts.jobDir, 'xrender.mp4');
   const passlog = join(opts.jobDir, 'xpasslog');
 
-  // Loop chrome still for the full video duration; -shortest ties to the video stream.
   const commonIn = [
     '-i',
     opts.assets.primaryVideo.path,
@@ -151,10 +173,31 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
   return { outputPath };
 }
 
-function scaleLayout(
-  layout: ReturnType<typeof layoutXPost>,
-  factor: number,
-): ReturnType<typeof layoutXPost> {
+function applyMeasuredChrome(
+  layout: XPostLayout,
+  measured: { x: number; y: number; contentHeight: number },
+): XPostLayout {
+  const evenDown = (n: number) => {
+    const r = Math.round(n);
+    return r % 2 === 0 ? r : r - 1;
+  };
+  // Prefer even dims for yuv420; never grow past the measured PNG crop height.
+  const x = Math.max(0, evenDown(measured.x));
+  const y = Math.max(0, evenDown(measured.y));
+  const height = evenDown(measured.contentHeight);
+  return {
+    ...layout,
+    canvas: { width: layout.canvas.width, height: Math.max(2, height) },
+    mediaSlot: { ...layout.mediaSlot, x, y },
+    sections: {
+      ...layout.sections,
+      mediaTop: y,
+      headerH: Math.max(0, y - 12),
+    },
+  };
+}
+
+function scaleLayout(layout: XPostLayout, factor: number): XPostLayout {
   const even = (n: number) => {
     const r = Math.round(n);
     return r % 2 === 0 ? r : r + 1;
