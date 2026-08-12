@@ -29,9 +29,14 @@ function pickLargestThumbnail(thumbnails: CarouselEntry['thumbnails']): string {
   return sorted[0].url;
 }
 
-async function downloadWithReferer(url: string, dest: string, label: string): Promise<void> {
+async function downloadWithReferer(
+  url: string,
+  dest: string,
+  label: string,
+  jobId?: string,
+): Promise<void> {
   try {
-    await downloadFile(url, dest, { headers: { Referer: INSTAGRAM_REFERER } });
+    await downloadFile(url, dest, { headers: { Referer: INSTAGRAM_REFERER }, jobId });
   } catch (err) {
     const message = (err as Error).message;
     if (/\b403\b/.test(message)) {
@@ -59,7 +64,7 @@ export async function downloadInstagramCarousel(
     const fileName = `slide_${String(i).padStart(3, '0')}${ext}`;
     const dest = join(imagesDir, fileName);
     log.debug(`Downloading Instagram slide ${i + 1}/${opts.entries.length}`);
-    await downloadWithReferer(url, dest, `slide ${i + 1}`);
+    await downloadWithReferer(url, dest, `slide ${i + 1}`, opts.jobId);
     images.push(dest);
   }
 
@@ -68,7 +73,7 @@ export async function downloadInstagramCarousel(
     const ext = extensionFromUrl(opts.music.url) || '.m4a';
     audio = join(opts.outDir, `audio${ext}`);
     log.debug('Downloading Instagram carousel audio');
-    await downloadWithReferer(opts.music.url, audio, 'audio');
+    await downloadWithReferer(opts.music.url, audio, 'audio', opts.jobId);
   }
 
   return {

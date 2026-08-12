@@ -1,5 +1,6 @@
 import { runYtDlp } from '../process/ytDlp.js';
 import { createLogger } from '../util/logger.js';
+import { isPermanentHttpClientError, isTransientDownloadError, withOneRetry } from '../util/retry.js';
 import { AuthFailureError, detectAuthFailure } from './authFailure.js';
 import { cookieArgs } from './cookies.js';
 import { extractImagePostFromDir, extractMusicDurationFromDir } from './extractImagePost.js';
@@ -15,6 +16,13 @@ export interface DumpJsonOptions {
   pagesDir?: string;
 }
 
+function isRetryableYtDlpError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (detectAuthFailure(msg)) return false;
+  if (isPermanentHttpClientError(err)) return false;
+  return isTransientDownloadError(err);
+}
+
 export async function dumpJson(opts: DumpJsonOptions): Promise<unknown> {
   const log = opts.jobId ? createLogger({ jobId: opts.jobId }) : logger;
 
@@ -25,7 +33,12 @@ export async function dumpJson(opts: DumpJsonOptions): Promise<unknown> {
   const args = ['-j', '--no-download', ...cookieArgs(opts.cookiesPath), opts.url];
   log.debug(`Dumping JSON for ${opts.url}`);
   try {
-    const { stdout } = await runYtDlp(args, { jobId: opts.jobId });
+    const { stdout } = await withOneRetry(() => runYtDlp(args, { jobId: opts.jobId }), {
+      isRetryable: isRetryableYtDlpError,
+      onRetry: (err) => {
+        log.warn(`Transient metadata failure; retrying once: ${(err as Error).message}`);
+      },
+    });
     return JSON.parse(stdout);
   } catch (err) {
     const stderr = (err as Error).message;
@@ -51,7 +64,12 @@ async function dumpSlideshowJson(
 
   let stdout: string;
   try {
-    const result = await runYtDlp(args, { jobId: opts.jobId, cwd: pagesDir });
+    const result = await withOneRetry(() => runYtDlp(args, { jobId: opts.jobId, cwd: pagesDir }), {
+      isRetryable: isRetryableYtDlpError,
+      onRetry: (err) => {
+        log.warn(`Transient metadata failure; retrying once: ${(err as Error).message}`);
+      },
+    });
     stdout = result.stdout;
   } catch (err) {
     const stderr = (err as Error).message;

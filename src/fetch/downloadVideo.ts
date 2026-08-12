@@ -2,6 +2,7 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { runYtDlp } from '../process/ytDlp.js';
 import { createLogger } from '../util/logger.js';
+import { isPermanentHttpClientError, isTransientDownloadError, withOneRetry } from '../util/retry.js';
 import { AuthFailureError, type AuthFailurePlatform, detectAuthFailure } from './authFailure.js';
 import { cookieArgs } from './cookies.js';
 import { detectNoVideo, NoVideoError } from './noVideo.js';
@@ -29,6 +30,14 @@ export interface DownloadVideoOptions {
   platform?: AuthFailurePlatform;
 }
 
+function isRetryableDownloadError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  // Permanent classification outcomes — do not burn a retry.
+  if (detectAuthFailure(msg) || detectNoVideo(msg)) return false;
+  if (isPermanentHttpClientError(err)) return false;
+  return isTransientDownloadError(err);
+}
+
 export async function downloadVideo(opts: DownloadVideoOptions): Promise<string> {
   const log = opts.jobId ? createLogger({ jobId: opts.jobId }) : logger;
   const outPath = join(opts.outDir, 'out.mp4');
@@ -36,7 +45,12 @@ export async function downloadVideo(opts: DownloadVideoOptions): Promise<string>
 
   log.debug(`Downloading video to ${outPath}`);
   try {
-    await runYtDlp(args, { jobId: opts.jobId });
+    await withOneRetry(() => runYtDlp(args, { jobId: opts.jobId }), {
+      isRetryable: isRetryableDownloadError,
+      onRetry: (err) => {
+        log.warn(`Transient download failure; retrying once: ${(err as Error).message}`);
+      },
+    });
     if (opts.maxSizeMb !== undefined) {
       const maxBytes = opts.maxSizeMb * 1024 * 1024;
       const size = statSync(outPath).size;

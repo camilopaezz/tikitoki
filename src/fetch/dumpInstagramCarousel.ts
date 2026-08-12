@@ -1,5 +1,6 @@
 import { runYtDlp } from '../process/ytDlp.js';
 import { createLogger } from '../util/logger.js';
+import { isPermanentHttpClientError, isTransientDownloadError, withOneRetry } from '../util/retry.js';
 import { AuthFailureError, detectAuthFailure } from './authFailure.js';
 import { cookieArgs } from './cookies.js';
 import { extractCarouselFromDir } from './extractInstagramCarousel.js';
@@ -29,6 +30,13 @@ export interface CarouselMetadata {
   entries: CarouselEntry[];
 }
 
+function isRetryableYtDlpError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (detectAuthFailure(msg)) return false;
+  if (isPermanentHttpClientError(err)) return false;
+  return isTransientDownloadError(err);
+}
+
 export async function dumpInstagramCarousel(opts: {
   url: string;
   cookiesPath?: string;
@@ -47,7 +55,12 @@ export async function dumpInstagramCarousel(opts: {
   log.debug(`Dumping Instagram carousel metadata for ${opts.url}`);
 
   try {
-    await runYtDlp(args, { jobId: opts.jobId, cwd: opts.pagesDir });
+    await withOneRetry(() => runYtDlp(args, { jobId: opts.jobId, cwd: opts.pagesDir }), {
+      isRetryable: isRetryableYtDlpError,
+      onRetry: (err) => {
+        log.warn(`Transient metadata failure; retrying once: ${(err as Error).message}`);
+      },
+    });
   } catch (err) {
     const stderr = (err as Error).message;
     if (detectAuthFailure(stderr)) {
