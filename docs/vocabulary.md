@@ -65,11 +65,15 @@ so searchability stays one-to-one.
   Built by small, testable builder functions.
 - **concat demuxer** — ffmpeg's image-sequence concatenation input. We write
   a `concat.txt` listing the slide files in the *per-job temp dir*.
-- **Bitrate budget** — size-cap strategy: before encoding, compute the video
-  bitrate as `target_size / duration` (target ~45 MB, under Telegram's 50 MB
-  upload cap) and run a **two-pass** H.264 encode at that bitrate.
+- **Bitrate budget** — before encoding, compute video bitrate as
+  `min(target_size / duration − audio, max_video_bitrate)` where target is
+  ~45 MB (under Telegram's 50 MB upload cap) and `max_video_bitrate` is a
+  quality ceiling (~4 Mbps) so short clips stay small instead of filling the
+  size target (better for WhatsApp/forward re-encodes). Then run a **two-pass**
+  H.264 encode at that bitrate.
 - **Two-pass encode** — ffmpeg `-pass 1` then `-pass 2` at the budgeted
-  bitrate. Predictable output size, better quality than single-pass CBR.
+  bitrate. Size is ≤ the target (and often much smaller when the max bitrate
+  binds); better quality than single-pass CBR.
 - **720p downscale retry** — if the budget at full resolution would drop
   below a quality floor, re-encode downscaled to 1280x720 (preserving aspect)
   to stay under the cap.

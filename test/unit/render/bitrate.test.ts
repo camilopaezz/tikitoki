@@ -2,11 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { computeBitrateBudget } from '../../../src/render/bitrate.js';
 
 describe('computeBitrateBudget', () => {
-  it('computes total bitrate from target size and duration', () => {
-    const budget = computeBitrateBudget(45, 60, 1920, 1080);
+  it('uses size budget when under the max video bitrate', () => {
+    // 45 MB / 120s ≈ 3.15 Mbps total → under 4 Mbps cap
+    const budget = computeBitrateBudget(45, 120, 1920, 1080);
     const total = budget.videoBitrate + budget.audioBitrate;
-    // 45 MB * 8 / 60s = 6,291,456 bps total
-    expect(total).toBeCloseTo(6_291_456, -3);
+    expect(total).toBeCloseTo((45 * 1024 * 1024 * 8) / 120, -3);
+  });
+
+  it('caps video bitrate so short clips do not fill the size target', () => {
+    const budget = computeBitrateBudget(45, 10, 1920, 1080);
+    expect(budget.videoBitrate).toBe(4_000_000);
+    // Uncapped would be ~36 Mbps; size would be ~45 MB. Cap keeps it small.
+    const approxMb = ((budget.videoBitrate + budget.audioBitrate) * 10) / 8 / 1024 / 1024;
+    expect(approxMb).toBeLessThan(6);
   });
 
   it('flags downscale when budget is below quality floor', () => {
@@ -17,5 +25,12 @@ describe('computeBitrateBudget', () => {
   it('does not flag downscale for short content', () => {
     const budget = computeBitrateBudget(45, 10, 1920, 1080);
     expect(budget.needsDownscale).toBe(false);
+  });
+
+  it('does not downscale short 4K just because the max bitrate is below the floor', () => {
+    // Uncapped size budget is huge; only MAX_VIDEO_BITRATE binds.
+    const budget = computeBitrateBudget(45, 10, 3840, 2160);
+    expect(budget.needsDownscale).toBe(false);
+    expect(budget.videoBitrate).toBe(4_000_000);
   });
 });
