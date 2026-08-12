@@ -57,7 +57,9 @@ describe('downloadFile', () => {
 
   it('retries once on HTTP 429 then succeeds', async () => {
     fetchMock
-      .mockResolvedValueOnce(fakeResponse(Buffer.from(''), { status: 429, statusText: 'Too Many Requests' }))
+      .mockResolvedValueOnce(
+        fakeResponse(Buffer.from(''), { status: 429, statusText: 'Too Many Requests' }),
+      )
       .mockResolvedValueOnce(fakeResponse(Buffer.from('ok-body')));
 
     const dest = join(outDir, 'slide.jpg');

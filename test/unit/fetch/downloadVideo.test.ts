@@ -109,7 +109,6 @@ describe('downloadVideo', () => {
     expect(runYtDlp).toHaveBeenCalledTimes(2);
   });
 
-
   it('checks size after a successful download', async () => {
     runYtDlp.mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
     // 50 MB > 45 MB limit

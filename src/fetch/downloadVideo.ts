@@ -2,7 +2,11 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { runYtDlp } from '../process/ytDlp.js';
 import { createLogger } from '../util/logger.js';
-import { isPermanentHttpClientError, isTransientDownloadError, withOneRetry } from '../util/retry.js';
+import {
+  isPermanentHttpClientError,
+  isTransientDownloadError,
+  withOneRetry,
+} from '../util/retry.js';
 import { AuthFailureError, type AuthFailurePlatform, detectAuthFailure } from './authFailure.js';
 import { cookieArgs } from './cookies.js';
 import { detectNoVideo, NoVideoError } from './noVideo.js';
