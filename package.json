@@ -20,17 +20,17 @@
     "xrender:frames": "tsx --env-file=.env scripts/xrender-visual-suite.ts"
   },
   "dependencies": {
-    "grammy": "^1.30.0",
     "@grammyjs/conversations": "^2.1.1",
-    "p-queue": "^9.3.1",
+    "grammy": "^1.45.1",
+    "p-queue": "^9.3.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.2",
-    "@types/node": "^22.0.0",
-    "tsx": "^4.21.0",
+    "@biomejs/biome": "^2.5.8",
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "keywords": [
     "telegram",
