@@ -13,18 +13,21 @@ RUN pnpm build
 FROM node:22-alpine
 
 # ffmpeg + yt-dlp deps; chromium for /xrender feed-card chrome screenshots.
+# curl_cffi gives yt-dlp browser TLS impersonation (required for TikTok).
 RUN apk add --no-cache \
     ffmpeg \
     ca-certificates \
     curl \
     python3 \
+    py3-pip \
     py3-mutagen \
     chromium \
     nss \
     freetype \
     harfbuzz \
     ttf-freefont \
-    font-noto-emoji
+    font-noto-emoji \
+ && pip3 install --no-cache-dir --break-system-packages 'curl_cffi>=0.10,<0.16'
 
 # Install the latest yt-dlp release into /usr/local/bin.
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \

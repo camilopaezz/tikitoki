@@ -79,6 +79,9 @@ export function isTransientDownloadError(err: unknown): boolean {
     /network (?:unreachable|error|is unreachable)/i.test(msg) ||
     // yt-dlp often prefixes transient failures this way *with* a transient reason.
     // Permanent 4xx already excluded above.
-    /Unable to download/i.test(msg)
+    /Unable to download/i.test(msg) ||
+    // TikTok JS challenge is flaky without (and sometimes with) impersonation.
+    /Unable to extract universal data for rehydration/i.test(msg) ||
+    /no impersonate target is available/i.test(msg)
   );
 }
