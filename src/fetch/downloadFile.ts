@@ -1,9 +1,14 @@
 import { createWriteStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { createLogger } from '../util/logger.js';
+import { isTransientDownloadError, withOneRetry } from '../util/retry.js';
+
+const logger = createLogger();
 
 export interface DownloadFileOptions {
   headers?: Record<string, string>;
+  jobId?: string;
 }
 
 export function extensionFromUrl(url: string): string {
@@ -16,10 +21,10 @@ export function extensionFromUrl(url: string): string {
   }
 }
 
-export async function downloadFile(
+async function downloadFileOnce(
   url: string,
   dest: string,
-  opts: DownloadFileOptions = {},
+  opts: DownloadFileOptions,
 ): Promise<void> {
   const response = await fetch(url, { headers: opts.headers });
   if (!response.ok) {
@@ -33,4 +38,18 @@ export async function downloadFile(
     Readable.fromWeb(body as import('stream/web').ReadableStream),
     createWriteStream(dest),
   );
+}
+
+export async function downloadFile(
+  url: string,
+  dest: string,
+  opts: DownloadFileOptions = {},
+): Promise<void> {
+  const log = opts.jobId ? createLogger({ jobId: opts.jobId }) : logger;
+  await withOneRetry(() => downloadFileOnce(url, dest, opts), {
+    isRetryable: isTransientDownloadError,
+    onRetry: (err) => {
+      log.warn(`Transient file download failure; retrying once: ${(err as Error).message}`);
+    },
+  });
 }

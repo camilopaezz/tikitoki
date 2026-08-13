@@ -60,7 +60,7 @@ export async function downloadSlideshow(opts: DownloadSlideshowOptions): Promise
     const fileName = `slide_${String(i).padStart(3, '0')}${ext}`;
     const dest = join(imagesDir, fileName);
     log.debug(`Downloading slide ${i + 1}/${urls.length}`);
-    await downloadFile(url, dest);
+    await downloadFile(url, dest, { jobId: opts.jobId });
     images.push(dest);
   }
 
@@ -70,7 +70,7 @@ export async function downloadSlideshow(opts: DownloadSlideshowOptions): Promise
     const ext = extensionFromUrl(audioUrl) || '.m4a';
     audio = join(opts.outDir, `audio${ext}`);
     log.debug('Downloading background audio');
-    await downloadFile(audioUrl, audio);
+    await downloadFile(audioUrl, audio, { jobId: opts.jobId });
   }
 
   return { images, audio, duration: opts.info.duration };
