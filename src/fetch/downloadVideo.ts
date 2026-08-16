@@ -10,6 +10,7 @@ import {
 import { AuthFailureError, type AuthFailurePlatform, detectAuthFailure } from './authFailure.js';
 import { cookieArgs } from './cookies.js';
 import { detectNoVideo, NoVideoError } from './noVideo.js';
+import { refererArgs } from './referer.js';
 
 const logger = createLogger();
 
@@ -45,7 +46,7 @@ function isRetryableDownloadError(err: unknown): boolean {
 export async function downloadVideo(opts: DownloadVideoOptions): Promise<string> {
   const log = opts.jobId ? createLogger({ jobId: opts.jobId }) : logger;
   const outPath = join(opts.outDir, 'out.mp4');
-  const args = ['-o', outPath, ...cookieArgs(opts.cookiesPath), opts.url];
+  const args = ['-o', outPath, ...cookieArgs(opts.cookiesPath), ...refererArgs(opts.url), opts.url];
 
   log.debug(`Downloading video to ${outPath}`);
   try {

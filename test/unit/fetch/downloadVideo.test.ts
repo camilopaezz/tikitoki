@@ -124,4 +124,38 @@ describe('downloadVideo', () => {
 
     expect(runYtDlp).toHaveBeenCalledTimes(1);
   });
+
+  it('passes --referer for TikTok URLs', async () => {
+    runYtDlp.mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
+
+    await downloadVideo({
+      url: 'https://www.tiktok.com/@u/video/1',
+      outDir: '/tmp/job',
+    });
+
+    expect(runYtDlp).toHaveBeenCalledWith(
+      [
+        '-o',
+        '/tmp/job/out.mp4',
+        '--referer',
+        'https://www.tiktok.com/',
+        'https://www.tiktok.com/@u/video/1',
+      ],
+      expect.anything(),
+    );
+  });
+
+  it('does not pass --referer for non-TikTok URLs', async () => {
+    runYtDlp.mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
+
+    await downloadVideo({
+      url: 'https://www.instagram.com/reel/abc/',
+      outDir: '/tmp/job',
+      platform: 'instagram',
+    });
+
+    const args = runYtDlp.mock.calls[0][0] as string[];
+    expect(args).not.toContain('--referer');
+    expect(args).toEqual(['-o', '/tmp/job/out.mp4', 'https://www.instagram.com/reel/abc/']);
+  });
 });

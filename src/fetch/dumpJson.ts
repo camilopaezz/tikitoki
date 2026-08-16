@@ -8,6 +8,7 @@ import {
 import { AuthFailureError, detectAuthFailure } from './authFailure.js';
 import { cookieArgs } from './cookies.js';
 import { extractImagePostFromDir, extractMusicDurationFromDir } from './extractImagePost.js';
+import { refererArgs } from './referer.js';
 import { rewriteToVideoUrl } from './resolveUrl.js';
 
 const logger = createLogger();
@@ -34,7 +35,13 @@ export async function dumpJson(opts: DumpJsonOptions): Promise<unknown> {
     return dumpSlideshowJson(opts, log);
   }
 
-  const args = ['-j', '--no-download', ...cookieArgs(opts.cookiesPath), opts.url];
+  const args = [
+    '-j',
+    '--no-download',
+    ...cookieArgs(opts.cookiesPath),
+    ...refererArgs(opts.url),
+    opts.url,
+  ];
   log.debug(`Dumping JSON for ${opts.url}`);
   try {
     const { stdout } = await withOneRetry(() => runYtDlp(args, { jobId: opts.jobId }), {
@@ -64,7 +71,14 @@ async function dumpSlideshowJson(
   const pagesDir = opts.pagesDir;
   const videoUrl = rewriteToVideoUrl(opts.url);
   log.debug(`Fetching slideshow metadata via rewritten URL: ${videoUrl}`);
-  const args = ['-j', '--no-download', '--write-pages', ...cookieArgs(opts.cookiesPath), videoUrl];
+  const args = [
+    '-j',
+    '--no-download',
+    '--write-pages',
+    ...cookieArgs(opts.cookiesPath),
+    ...refererArgs(videoUrl),
+    videoUrl,
+  ];
 
   let stdout: string;
   try {

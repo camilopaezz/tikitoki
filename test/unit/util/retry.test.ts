@@ -53,6 +53,7 @@ describe('isTransientDownloadError', () => {
     'network error',
     'ERROR: [TikTok] 123: Unable to extract universal data for rehydration',
     'WARNING: [TikTok] The extractor is attempting impersonation, but no impersonate target is available',
+    'ERROR: [TikTok] 123: Unexpected response from webpage request',
   ])('treats %s as transient', (msg) => {
     expect(isTransientDownloadError(new Error(msg))).toBe(true);
   });

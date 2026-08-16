@@ -82,6 +82,8 @@ export function isTransientDownloadError(err: unknown): boolean {
     /Unable to download/i.test(msg) ||
     // TikTok JS challenge is flaky without (and sometimes with) impersonation.
     /Unable to extract universal data for rehydration/i.test(msg) ||
-    /no impersonate target is available/i.test(msg)
+    /no impersonate target is available/i.test(msg) ||
+    // TikTok anti-bot page response can flap; referer fix is primary, retry helps residual blips.
+    /Unexpected response from webpage request/i.test(msg)
   );
 }
