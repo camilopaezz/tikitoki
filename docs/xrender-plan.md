@@ -431,7 +431,8 @@ FxTwitter fallback still optional later.
 **Goal:** `XPostLayout` + primary video → `xrender.mp4` under size budget.
 
 - [x] `src/render/x/filtergraph.ts` — contain/cover into media slot + chrome overlay
-- [x] `src/render/x/renderXPost.ts` — layout → chrome PNG → two-pass encode +
+- [x] `src/render/x/renderXPost.ts` — layout → chrome PNG → encode (single-pass
+  when max bitrate binds; two-pass when size budget binds) +
       source audio + bitrate budget + optional 720-wide downscale
 - [x] Unit tests for filtergraph + renderXPost (mocked screenshot/ffmpeg)
 - [ ] Integration: real chromium + ffmpeg fixture (optional / later)
