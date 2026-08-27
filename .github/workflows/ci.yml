@@ -36,7 +36,8 @@ jobs:
         run: pnpm test
 
   image:
-    if: github.event_name == 'push'
+    # Fork PRs cannot push to GHCR with GITHUB_TOKEN.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     needs: check
     runs-on: ubuntu-latest
     permissions:
@@ -53,10 +54,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.sha }}
+            type=ref,event=pr
+
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Image tags
+        run: |
+          {
+            echo '### Image'
+            echo ''
+            echo '```'
+            echo '${{ steps.meta.outputs.tags }}'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
