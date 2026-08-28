@@ -69,11 +69,15 @@ so searchability stays one-to-one.
   `min(target_size / duration − audio, max_video_bitrate)` where target is
   ~45 MB (under Telegram's 50 MB upload cap) and `max_video_bitrate` is a
   quality ceiling (~4 Mbps) so short clips stay small instead of filling the
-  size target (better for WhatsApp/forward re-encodes). Then run a **two-pass**
-  H.264 encode at that bitrate.
+  size target (better for WhatsApp/forward re-encodes). Slideshows always run a
+  **two-pass** H.264 encode. **xrender** uses preset `veryfast` with
+  **single-pass VBV** when the max bitrate binds, and **two-pass** when the
+  size budget binds.
 - **Two-pass encode** — ffmpeg `-pass 1` then `-pass 2` at the budgeted
-  bitrate. Size is ≤ the target (and often much smaller when the max bitrate
-  binds); better quality than single-pass CBR.
+  bitrate. Slideshows always use it. **xrender** uses it only when the size
+  budget binds (long clips); short clips hit the 4 Mbps cap and use single-pass
+  VBV instead (the second pass would mostly burn CPU while size already has
+  headroom).
 - **720p downscale retry** — if the budget at full resolution would drop
   below a quality floor, re-encode downscaled to 1280x720 (preserving aspect)
   to stay under the cap.

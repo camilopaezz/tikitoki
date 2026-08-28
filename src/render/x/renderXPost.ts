@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import type { XPostAssets } from '../../fetch/downloadXAssets.js';
 import { runFfmpeg } from '../../process/ffmpeg.js';
 import { createLogger } from '../../util/logger.js';
+import { createStopwatch } from '../../util/stopwatch.js';
 import { computeBitrateBudget } from '../bitrate.js';
 import { buildChromeHtml } from './chromeHtml.js';
 import { buildXOverlayFiltergraph } from './filtergraph.js';
@@ -9,6 +10,9 @@ import { layoutXPost } from './layout.js';
 import { cropChromePng, measureChromePng } from './measureChrome.js';
 import { screenshotChrome } from './screenshotChrome.js';
 import type { XPostLayout } from './types.js';
+
+/** Fast enough for bot hosts; quality checked against feed-card chrome at 4 Mbps. */
+const XRENDER_PRESET = 'veryfast';
 
 export interface RenderXPostOptions {
   jobId: string;
@@ -24,6 +28,8 @@ export interface RenderXPostOptions {
 
 export interface RenderXPostResult {
   outputPath: string;
+  /** Wall-clock ms per render sub-step (screenshot, measure, encode, …). */
+  timings: Record<string, number>;
 }
 
 /**
@@ -32,9 +38,14 @@ export interface RenderXPostResult {
  *
  * Text wrap is owned by Chromium. We never place the media hole from a
  * chars-per-line estimate (that caused empty gaps / clipped captions).
+ *
+ * Encode: single-pass VBV when the 4 Mbps cap binds (short clips — size has
+ * headroom). Two-pass when the Telegram size budget binds (long clips) so
+ * average bitrate stays honest.
  */
 export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPostResult> {
   const log = createLogger({ jobId: opts.jobId });
+  const sw = createStopwatch();
   const screenshotFn = opts.screenshotFn ?? screenshotChrome;
   const runFfmpegFn = opts.runFfmpegFn ?? runFfmpeg;
   const measureFn = opts.measureFn ?? measureChromePng;
@@ -46,6 +57,8 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
   );
 
   const html = buildChromeHtml(opts.assets, layout);
+  sw.lap('layout_html');
+
   const chromePath = await screenshotFn({
     html,
     jobDir: opts.jobDir,
@@ -53,6 +66,7 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
     height: layout.canvas.height,
     jobId: opts.jobId,
   });
+  log.debug(`xrender timed screenshot=${sw.lap('screenshot')}ms`);
 
   // Chromium laid out real text — read where the green hole landed.
   const measured = await measureFn(chromePath, { jobId: opts.jobId });
@@ -62,11 +76,10 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
       `canvas=${layout.canvas.width}x${layout.canvas.height} media=${layout.mediaSlot.w}x${layout.mediaSlot.h} ` +
       `(green ${measured.greenW}x${measured.greenH})`,
   );
+  sw.lap('measure');
 
-  if (layout.canvas.height < layout.canvas.width) {
-    // still fine
-  }
   await cropFn(chromePath, layout.canvas.width, layout.canvas.height, { jobId: opts.jobId });
+  sw.lap('crop');
 
   const duration = opts.assets.primaryVideo.durationSec;
   let canvas = layout.canvas;
@@ -74,14 +87,14 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
 
   let filterLayout = layout;
   if (budget.needsDownscale) {
-    const scale = 720 / canvas.width;
     const w = Math.round(720 / 2) * 2;
-    const h = Math.round((canvas.height * scale) / 2) * 2;
+    const h = Math.round((canvas.height * (720 / canvas.width)) / 2) * 2;
     log.info(`xrender budget low; downscaling canvas to ${w}x${h}`);
     filterLayout = scaleLayout(layout, w / canvas.width);
     canvas = filterLayout.canvas;
     budget = computeBitrateBudget(opts.targetSizeMb ?? 45, duration, w, h);
   }
+  sw.lap('budget');
 
   const filterComplex = buildXOverlayFiltergraph({
     layout: filterLayout,
@@ -89,10 +102,9 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
     videoHeight: opts.assets.primaryVideo.height,
     durationSec: duration,
   });
+  sw.lap('filtergraph');
 
   const outputPath = join(opts.jobDir, 'xrender.mp4');
-  const passlog = join(opts.jobDir, 'xpasslog');
-
   const commonIn = [
     '-i',
     opts.assets.primaryVideo.path,
@@ -103,12 +115,11 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
     '-i',
     chromePath,
   ];
-
   const videoCodec = [
     '-c:v',
     'libx264',
     '-preset',
-    'medium',
+    XRENDER_PRESET,
     '-b:v',
     String(budget.videoBitrate),
     '-maxrate',
@@ -123,54 +134,90 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
     '+faststart',
   ];
 
-  log.debug('xrender encode pass 1');
-  await runFfmpegFn(
-    [
-      ...commonIn,
-      '-filter_complex',
-      filterComplex,
-      '-map',
-      '[out]',
-      '-an',
-      ...videoCodec,
-      '-pass',
-      '1',
-      '-passlogfile',
-      passlog,
-      '-f',
-      'null',
-      '/dev/null',
-    ],
-    { jobId: opts.jobId },
+  // Short clips: MAX bitrate binds → size has headroom → single-pass is fine.
+  // Long clips: size budget binds → 2-pass keeps average bitrate under the cap.
+  const twoPass = !budget.hitMaxBitrate;
+  log.info(
+    `xrender encode start bitrate=${budget.videoBitrate} canvas=${canvas.width}x${canvas.height} ` +
+      `duration=${duration}s preset=${XRENDER_PRESET} pass=${twoPass ? 2 : 1}` +
+      `${budget.hitMaxBitrate ? ' (max bitrate)' : ' (size budget)'}`,
   );
 
-  log.debug(`xrender encode pass 2 -> ${outputPath}`);
-  await runFfmpegFn(
-    [
-      ...commonIn,
-      '-filter_complex',
-      filterComplex,
-      '-map',
-      '[out]',
-      '-map',
-      '0:a?',
-      ...videoCodec,
-      '-c:a',
-      'aac',
-      '-b:a',
-      String(budget.audioBitrate),
-      '-shortest',
-      '-pass',
-      '2',
-      '-passlogfile',
-      passlog,
-      '-y',
-      outputPath,
-    ],
-    { jobId: opts.jobId },
-  );
+  if (twoPass) {
+    const passlog = join(opts.jobDir, 'xpasslog');
+    await runFfmpegFn(
+      [
+        ...commonIn,
+        '-filter_complex',
+        filterComplex,
+        '-map',
+        '[out]',
+        '-an',
+        ...videoCodec,
+        '-pass',
+        '1',
+        '-passlogfile',
+        passlog,
+        '-f',
+        'null',
+        '/dev/null',
+      ],
+      { jobId: opts.jobId },
+    );
+    log.debug(`xrender timed encode_pass1=${sw.lap('encode_pass1')}ms`);
 
-  return { outputPath };
+    await runFfmpegFn(
+      [
+        ...commonIn,
+        '-filter_complex',
+        filterComplex,
+        '-map',
+        '[out]',
+        '-map',
+        '0:a?',
+        ...videoCodec,
+        '-c:a',
+        'aac',
+        '-b:a',
+        String(budget.audioBitrate),
+        '-shortest',
+        '-pass',
+        '2',
+        '-passlogfile',
+        passlog,
+        '-y',
+        outputPath,
+      ],
+      { jobId: opts.jobId },
+    );
+    log.debug(
+      `xrender timed encode_pass2=${sw.lap('encode_pass2')}ms total_render=${sw.total()}ms`,
+    );
+  } else {
+    await runFfmpegFn(
+      [
+        ...commonIn,
+        '-filter_complex',
+        filterComplex,
+        '-map',
+        '[out]',
+        '-map',
+        '0:a?',
+        ...videoCodec,
+        '-c:a',
+        'aac',
+        '-b:a',
+        String(budget.audioBitrate),
+        '-shortest',
+        '-y',
+        outputPath,
+      ],
+      { jobId: opts.jobId },
+    );
+    log.debug(`xrender timed encode=${sw.lap('encode')}ms total_render=${sw.total()}ms`);
+  }
+
+  return { outputPath, timings: { ...sw.marks(), total: sw.total() } };
 }
 
 function applyMeasuredChrome(

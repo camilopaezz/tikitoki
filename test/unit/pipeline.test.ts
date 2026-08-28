@@ -513,7 +513,7 @@ describe('createPipeline', () => {
     fetchTwitterSyndication.mockResolvedValue(chrome);
     const assets = { layoutKind: 'simple_video', primaryVideo: { path: '/v.mp4' } };
     downloadXAssets.mockResolvedValue(assets);
-    renderXPost.mockResolvedValue({ outputPath: '/tmp/xrender.mp4' });
+    renderXPost.mockResolvedValue({ outputPath: '/tmp/xrender.mp4', timings: {} });
 
     const stages: string[] = [];
     const onStage = vi.fn(async (stage: string) => {

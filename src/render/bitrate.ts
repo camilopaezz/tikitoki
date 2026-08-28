@@ -3,6 +3,12 @@ export interface BitrateBudget {
   videoBitrate: number;
   audioBitrate: number;
   needsDownscale: boolean;
+  /**
+   * True when MAX_VIDEO_BITRATE bound (short clips). Size target has headroom,
+   * so single-pass VBV is safe. False when the size budget binds (long clips) —
+   * prefer 2-pass so average bitrate stays honest under Telegram's cap.
+   */
+  hitMaxBitrate: boolean;
 }
 
 // Size-pressure floor only: if target_size/duration is below this bpp at full
@@ -12,7 +18,7 @@ const QUALITY_FLOOR_BITS_PER_PIXEL_PER_FRAME = 0.08;
 const FPS = 30;
 // Size budget alone fills ~45 MB for short clips (e.g. 10s → ~36 Mbps).
 // Cap so we don't ship fat files that re-compress worse on WhatsApp/forwards.
-const MAX_VIDEO_BITRATE = 4_000_000; // 4 Mbps — solid 1080p phone quality
+export const MAX_VIDEO_BITRATE = 4_000_000; // 4 Mbps — solid 1080p phone quality
 
 export function computeBitrateBudget(
   targetSizeMb: number,
@@ -29,6 +35,7 @@ export function computeBitrateBudget(
   const floorBitrate = pixelsPerFrame * FPS * QUALITY_FLOOR_BITS_PER_PIXEL_PER_FRAME;
   // Downscale only when size pressure is real — not when MAX_VIDEO_BITRATE binds.
   const needsDownscale = sizeBudgetVideo < floorBitrate;
+  const hitMaxBitrate = sizeBudgetVideo > MAX_VIDEO_BITRATE;
   const videoBitrate = Math.min(sizeBudgetVideo, MAX_VIDEO_BITRATE);
 
   return {
@@ -36,5 +43,6 @@ export function computeBitrateBudget(
     videoBitrate,
     audioBitrate,
     needsDownscale,
+    hitMaxBitrate,
   };
 }

@@ -18,6 +18,7 @@ import type { Job, JobResult, Stage } from './job/types.js';
 import { renderSlideshow } from './render/renderSlideshow.js';
 import { renderXPost } from './render/x/renderXPost.js';
 import { createLogger } from './util/logger.js';
+import { createStopwatch } from './util/stopwatch.js';
 import { perJobDir } from './util/tmp.js';
 
 export interface PipelineOptions {
@@ -93,11 +94,13 @@ async function runXRender(
   onStage: (stage: Stage) => Promise<void>,
   log: ReturnType<typeof createLogger>,
 ): Promise<JobResult> {
+  const sw = createStopwatch();
   const resolved = await resolveTwitterUrl(job.url, job.jobId);
   const statusId = parseTwitterStatusId(resolved.url);
   if (!statusId) {
     throw new Error('Could not parse a Twitter/X status id from that URL.');
   }
+  log.debug(`xrender timed resolve=${sw.lap('resolve')}ms status=${statusId}`);
 
   log.info(`xrender chrome fetch for status ${statusId}`);
   const chrome = await fetchTwitterSyndication({
@@ -105,6 +108,7 @@ async function runXRender(
     sourceUrl: resolved.url,
     jobId: job.jobId,
   });
+  log.debug(`xrender timed syndication=${sw.lap('syndication')}ms`);
 
   const assets = await downloadXAssets({
     chrome,
@@ -112,14 +116,20 @@ async function runXRender(
     cookiesPath: config.twitterCookiesPath,
     jobId: job.jobId,
   });
+  log.debug(
+    `xrender timed download_assets=${sw.lap('download_assets')}ms video=${assets.primaryVideo.width}x${assets.primaryVideo.height} ${assets.primaryVideo.durationSec}s`,
+  );
 
   await onStage('Rendering');
-  const { outputPath } = await renderXPost({
+  const { outputPath, timings: renderTimings } = await renderXPost({
     jobId: job.jobId,
     assets,
     jobDir,
     targetSizeMb: config.targetSizeMb,
   });
+  log.debug(
+    `xrender timed render=${sw.lap('render')}ms total_fetch_render=${sw.total()}ms render_detail=${JSON.stringify(renderTimings)}`,
+  );
   await onStage('Uploading');
   return { outputPath };
 }
