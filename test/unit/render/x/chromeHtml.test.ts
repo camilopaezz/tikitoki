@@ -36,6 +36,8 @@ describe('buildChromeHtml', () => {
     expect(html).toContain('@brndxix');
     expect(html).toContain('#1e9cf1'); // verified badge
     expect(html).toContain('#00ff00'); // chroma-key media hole
+    expect(html).toContain('font-family: TwitterChirp');
+    expect(html).not.toContain('@font-face');
     expect(html).not.toMatch(/duration|mute|0:12|00:12/i);
   });
 

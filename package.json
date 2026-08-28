@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit",
     "format": "biome format --write .",
     "xrender:frames": "tsx --env-file=.env scripts/xrender-visual-suite.ts",
-    "xrender:bench": "tsx --env-file=.env scripts/bench-xrender.ts"
+    "xrender:bench": "tsx --env-file=.env scripts/bench-xrender.ts",
+    "xrender:fonts": "tsx scripts/fetch-chirp-fonts.ts"
   },
   "dependencies": {
     "@grammyjs/conversations": "^2.1.1",

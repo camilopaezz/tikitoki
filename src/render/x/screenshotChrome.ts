@@ -1,7 +1,8 @@
-import { rename, writeFile } from 'node:fs/promises';
+import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runProcess } from '../../process/run.js';
 import { createLogger } from '../../util/logger.js';
+import { injectChirpFontCss, loadChirpFontFaceCss } from './chirpFonts.js';
 
 const logger = createLogger();
 
@@ -42,7 +43,14 @@ export async function screenshotChrome(opts: ScreenshotChromeOptions): Promise<s
   const htmlPath = join(chromeDir, 'chrome.html');
   const pngPath = join(chromeDir, 'chrome.png');
 
-  await writeFile(htmlPath, opts.html, 'utf8');
+  await mkdir(chromeDir, { recursive: true });
+  let html = opts.html;
+  try {
+    html = injectChirpFontCss(html, await loadChirpFontFaceCss({ jobId: opts.jobId }));
+  } catch (err) {
+    log.warn(`Chirp fonts unavailable; using system fallback: ${(err as Error).message}`);
+  }
+  await writeFile(htmlPath, html, 'utf8');
 
   const bin = await resolveChromium(opts.chromiumBin);
   const fileUrl = `file://${htmlPath}`;

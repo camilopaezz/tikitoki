@@ -151,6 +151,11 @@ so searchability stays one-to-one.
   images; may hold the video in the *quote-of-video* layout).
 - **Chrome metadata** — authors, texts, avatars, quote tree, layout kind from
   syndication/FxTwitter (not yt-dlp alone). Distinct from **video bytes**.
+- **Chirp / TwitterChirp** — X’s UI typeface. Feed body is Regular 400, names
+  are Bold 700. xrender fetches the latin woff2 subsets from `abs.twimg.com`
+  into `assets/fonts/` (gitignored; hashed filenames) and inlines them as
+  data URIs in chrome HTML. If the fetch fails, chrome falls back to the
+  system stack so text still paints.
 
 ## Deployment
 
