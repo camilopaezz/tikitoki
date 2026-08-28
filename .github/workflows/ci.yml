@@ -70,10 +70,13 @@ jobs:
             type=ref,event=pr
           labels: |
             org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
+          annotations: |
+            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
+          context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
