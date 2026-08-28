@@ -34,7 +34,7 @@ describe('buildChromeHtml', () => {
     expect(html).not.toContain('data-y=');
     expect(html).toContain('brandon*');
     expect(html).toContain('@brndxix');
-    expect(html).toContain('#1d9bf0'); // verified badge
+    expect(html).toContain('#1e9cf1'); // verified badge
     expect(html).toContain('#00ff00'); // chroma-key media hole
     expect(html).not.toMatch(/duration|mute|0:12|00:12/i);
   });
@@ -97,5 +97,44 @@ describe('buildChromeHtml', () => {
     expect(html).not.toMatch(/class="quote quote-single"/);
     expect(html).toMatch(/class="qimgs"/);
     expect(html).toMatch(/grid-template-columns:\s*repeat\(2/);
+    expect(html).toMatch(/aspect-ratio:\s*16\s*\/\s*9/);
+  });
+
+  it('clamps quote body to 3 visual lines', () => {
+    const assets: XPostAssets = {
+      ...base,
+      layoutKind: 'video_quotes',
+      quote: {
+        author: { name: 'Q', handle: 'q', verified: false },
+        text: {
+          text: 'one\n\ntwo\n\nthree\n\nfour extra paragraph',
+          displayText: 'one\n\ntwo\n\nthree\n\nfour extra paragraph',
+        },
+        images: [],
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    expect(html).toMatch(/\.qtext\s*\{[^}]*-webkit-line-clamp:\s*3/s);
+  });
+
+  it('places the media hole inside the quote card for quote_of_video', () => {
+    const assets: XPostAssets = {
+      ...base,
+      layoutKind: 'quote_of_video',
+      quote: {
+        author: { name: 'Deportes RCN', handle: 'DeportesRCN', verified: false },
+        text: { text: '¡LO HIZO!', displayText: '¡LO HIZO!' },
+        images: [],
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    const body = html.slice(html.indexOf('<body>'));
+    expect(body).toContain('class="quote"');
+    expect(body).toContain('data-media-hole');
+    expect(body.indexOf('class="quote"')).toBeLessThan(body.indexOf('data-media-hole'));
+    expect(body.indexOf('data-media-hole')).toBeLessThan(body.indexOf('</div>\n      </div>'));
+    // No sibling hole before the quote.
+    const beforeQuote = body.slice(0, body.indexOf('class="quote"'));
+    expect(beforeQuote).not.toContain('data-media-hole');
   });
 });
