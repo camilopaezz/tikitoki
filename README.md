@@ -51,6 +51,20 @@ Run your own instance with Docker Compose.
 docker compose up -d --build
 ```
 
+Pre-built images are published to [GHCR](https://github.com/camilopaezz/tikitoki/pkgs/container/tikitoki). Point compose at a tag instead of `build: .` when you want to pull rather than build locally:
+
+| Tag | When |
+|-----|------|
+| `latest` | every push to `main` |
+| `<sha>` | every image build (PR head SHA on pull requests) |
+| `pr-<number>` | every pull request (same-repo) |
+
+```yaml
+services:
+  tikitoki:
+    image: ghcr.io/camilopaezz/tikitoki:pr-12
+```
+
 Suggested layout:
 
 ```
