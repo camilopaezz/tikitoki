@@ -5,46 +5,55 @@ import type { XMediaFit, XPostLayout } from './types.js';
 /** Fixed feed column width (even). */
 export const XRENDER_WIDTH = 1080;
 
-// Spacing tokens must match chromeHtml.ts document-flow styles.
-// Vertical media Y is NOT trusted from this module — Chromium lays out text,
-// then measureChromePng() reads the green hole. These numbers only size the
-// media slot and provide a tall-enough screenshot window upper bound.
-const PAD_X = 44; // ~16px at 390 → scale 1080/390
-const PAD_TOP = 33;
-const PAD_BOTTOM = 44;
-const AVATAR = 72;
-/** Gap between outer avatar and name/text column (matches chromeHtml .header gap). */
-const HEADER_GAP = 16;
-const NAME_LINE = 44; // 36px font / 44px line-height
-const TEXT_LINE = 44;
+/**
+ * 390 CSS-px feed tokens × 1080/390 ≈ 2.769, measured 2026-08-27 on live x.com.
+ * Spacing tokens must match chromeHtml.ts document-flow styles.
+ * Vertical media Y is NOT trusted from this module — Chromium lays out text,
+ * then measureChromePng() reads the green hole. These numbers only size the
+ * media slot and provide a tall-enough screenshot window upper bound.
+ */
+const PAD_X = 44; // 16
+const PAD_TOP = 33; // 12
+const PAD_BOTTOM = 44; // 16
+const AVATAR = 111; // 40
+const HEADER_GAP = 22; // 8
+const FONT_SIZE = 42; // 15
+const LINE_HEIGHT = 56; // 20
+const NAME_LINE = LINE_HEIGHT;
+const TEXT_LINE = LINE_HEIGHT;
 const TEXT_MAX_LINES = 3;
-const TEXT_MARGIN_TOP = 8;
-const GAP_HEADER_MEDIA = 12;
-const GAP_MEDIA_QUOTE = 24;
-const MEDIA_RADIUS = 44;
-const QUOTE_PAD = 20;
-const QUOTE_AVATAR = 40;
-/** Match outer name/text line height (feed 15/20 scaled). */
-const QUOTE_NAME_LINE = 44;
-const QUOTE_TEXT_LINE = 44;
-const QUOTE_TEXT_MARGIN_TOP = 8;
-const QUOTE_RADIUS = 44;
-/** Multi-image band under quote text (.qimg height + margin-top). */
-const QUOTE_IMAGES_H = 180 + 12;
-/** Single quote image sits beside text (square thumb) — not stacked under it.
- * ~100px @ 390 feed × scale ≈ 2.4 → ~240 at 1080 chrome. */
-const QUOTE_SINGLE_IMG = 240;
+const TEXT_MARGIN_TOP = 6; // 2 (gap-0.5)
+const NAME_ROW_GAP = 11; // 4 (gap-1)
+const GAP_HEADER_MEDIA = 33; // 12 (gap-3)
+const GAP_MEDIA_QUOTE = 33; // 12
+const MEDIA_RADIUS = 80; // 28.8 rounded-md
+const MEDIA_BORDER = 3; // 1px hairline
+const QUOTE_PAD = 33; // 12 (p-3)
+const QUOTE_AVATAR = 66; // 24
+const QUOTE_NAME_LINE = LINE_HEIGHT;
+const QUOTE_TEXT_LINE = LINE_HEIGHT;
+const QUOTE_INNER_GAP = 11; // 4 (gap-1)
+const QUOTE_RADIUS = 44; // 16
+const QUOTE_BORDER = 3;
+const BADGE = 42; // 15
+const QUOTE_SINGLE_IMG = 277; // ~100 @390
+const QUOTE_IMG_GAP = 6; // 2 (gap-0.5)
 /**
  * Max media-box height as a multiple of content width. Tall videos are
  * **contained** into this box (full frame visible) — width shrinks so aspect
  * is preserved, matching the X app feed (not full-column cover-crop).
- * At 904 text-column width → max H ≈ 1130; 9:16 → ~636×1130 left-aligned with text.
  */
 const MAX_MEDIA_H_RATIO = 5 / 4; // height / width of the fit box
 
 function even(n: number): number {
   const r = Math.round(n);
   return r % 2 === 0 ? r : r + 1;
+}
+
+/** Even, never larger than n — used so slot.x + slot.w + padX stays on-canvas. */
+function evenFloor(n: number): number {
+  const r = Math.floor(n);
+  return r % 2 === 0 ? r : r - 1;
 }
 
 /** Max media slot height for a given content width (even). */
@@ -89,6 +98,17 @@ export function computeMediaSlotSize(
   return { w, h, fit: 'contain' };
 }
 
+function quoteInnerWidth(textColW: number): number {
+  return Math.max(2, even(textColW - QUOTE_PAD * 2 - QUOTE_BORDER * 2));
+}
+
+/** 16:9 band for 2–4 quote photos (live feed `aspect-video` + `grid-cols-2`). */
+function quoteImagesBandH(nImgs: number, innerW: number): number {
+  if (nImgs <= 0) return 0;
+  if (nImgs === 1) return QUOTE_SINGLE_IMG;
+  return QUOTE_INNER_GAP + even((innerW * 9) / 16);
+}
+
 /**
  * Geometry for xrender. Media **width/height/fit** are authoritative.
  * Media **Y** and final canvas **height** are upper-bound placeholders —
@@ -98,56 +118,62 @@ export function computeMediaSlotSize(
 export function layoutXPost(assets: XPostAssets): XPostLayout {
   const width = XRENDER_WIDTH;
   const padX = PAD_X;
-  // Media + caption sit in the text column under the name (right of avatar).
   const textColX = padX + AVATAR + HEADER_GAP;
-  const textColW = even(width - textColX - padX);
+  const textColW = evenFloor(width - textColX - padX);
+  const videoInsideQuote = assets.layoutKind === 'quote_of_video' && Boolean(assets.quote);
+  const quoteInnerW = quoteInnerWidth(textColW);
+  const mediaFitW = videoInsideQuote ? quoteInnerW : textColW;
 
-  // Upper bound for screenshot window: always reserve max caption lines when
-  // any outer text exists (Chromium may wrap more than a char estimate).
   const hasOuterText = Boolean(truncateTweetText(assets.outer.text.displayText, 3, 180));
   const textH = hasOuterText ? TEXT_MAX_LINES * TEXT_LINE : 0;
   const nameBlockH = NAME_LINE + (textH > 0 ? TEXT_MARGIN_TOP + textH : 0);
   const headerH = Math.max(AVATAR, nameBlockH);
-  const mediaTop = even(PAD_TOP + headerH + GAP_HEADER_MEDIA);
+  const afterHeader = even(PAD_TOP + headerH + GAP_HEADER_MEDIA);
   const media = computeMediaSlotSize(
-    textColW,
+    mediaFitW,
     assets.primaryVideo.width,
     assets.primaryVideo.height,
   );
 
   const mediaSlot = {
-    // Align with text column left (X feed). Measured green hole refines X/Y.
-    x: textColX,
-    y: mediaTop, // placeholder — replaced by measured green hole Y
+    x: videoInsideQuote ? even(textColX + QUOTE_PAD + QUOTE_BORDER) : textColX,
+    y: afterHeader, // placeholder — replaced by measured green hole Y
     w: media.w,
     h: media.h,
     fit: media.fit,
     cornerRadius: MEDIA_RADIUS,
   };
 
-  let height = mediaTop + media.h + PAD_BOTTOM;
+  let height = afterHeader + media.h + PAD_BOTTOM;
   let quoteTop: number | undefined;
   let quoteH: number | undefined;
+  let mediaTop = afterHeader;
 
   if (assets.quote) {
-    quoteTop = mediaTop + media.h + GAP_MEDIA_QUOTE;
-    // Upper-bound quote height (flow sizes naturally; we only need window room).
     const qTextH = assets.quote.text.displayText ? 3 * QUOTE_TEXT_LINE : 0;
     const qHeader = Math.max(QUOTE_AVATAR, QUOTE_NAME_LINE);
-    const textBlockH = qHeader + (qTextH ? QUOTE_TEXT_MARGIN_TOP + qTextH : 0);
-    const nImgs = assets.quote.images.length;
-    // Single image: header on top, then thumb | body text. Multi: header + text + grid.
+    const nImgs = videoInsideQuote ? 0 : assets.quote.images.length;
+    const imgBand = quoteImagesBandH(nImgs, quoteInnerW);
+    const textBlockH = qHeader + (qTextH ? QUOTE_INNER_GAP + qTextH : 0);
     const bodyH =
       nImgs === 1
-        ? qHeader + 12 + Math.max(QUOTE_SINGLE_IMG, qTextH || 0)
-        : textBlockH + (nImgs > 1 ? QUOTE_IMAGES_H : 0);
-    quoteH = even(QUOTE_PAD * 2 + bodyH);
-    height = quoteTop + quoteH + PAD_BOTTOM;
+        ? qHeader + QUOTE_INNER_GAP + Math.max(QUOTE_SINGLE_IMG, qTextH || 0)
+        : textBlockH + imgBand + (videoInsideQuote ? QUOTE_INNER_GAP + media.h : 0);
+    quoteH = even(QUOTE_PAD * 2 + QUOTE_BORDER * 2 + bodyH);
+
+    if (videoInsideQuote) {
+      quoteTop = afterHeader;
+      mediaTop = even(afterHeader + QUOTE_PAD + QUOTE_BORDER + textBlockH + QUOTE_INNER_GAP);
+      height = quoteTop + quoteH + PAD_BOTTOM;
+    } else {
+      quoteTop = afterHeader + media.h + GAP_MEDIA_QUOTE;
+      height = quoteTop + quoteH + PAD_BOTTOM;
+    }
   }
 
   return {
     canvas: { width, height: even(height) },
-    mediaSlot,
+    mediaSlot: { ...mediaSlot, y: mediaTop },
     contentWidth: width,
     padX,
     sections: {
@@ -167,11 +193,23 @@ export const X_LAYOUT_CONSTANTS = {
   PAD_BOTTOM,
   AVATAR,
   HEADER_GAP,
+  FONT_SIZE,
+  LINE_HEIGHT,
+  TEXT_MARGIN_TOP,
+  NAME_ROW_GAP,
   MEDIA_RADIUS,
+  MEDIA_BORDER,
   QUOTE_RADIUS,
+  QUOTE_PAD,
+  QUOTE_AVATAR,
+  QUOTE_INNER_GAP,
+  QUOTE_BORDER,
+  QUOTE_SINGLE_IMG,
+  QUOTE_IMG_GAP,
+  BADGE,
   MAX_MEDIA_H_RATIO,
   TEXT_LINE,
   GAP_HEADER_MEDIA,
+  GAP_MEDIA_QUOTE,
   NAME_LINE,
-  TEXT_MARGIN_TOP,
 } as const;

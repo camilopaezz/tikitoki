@@ -132,4 +132,21 @@ describe('layoutXPost', () => {
     expect(single.sections.quoteH ?? 0).toBeGreaterThan(textOnly.sections.quoteH ?? 0);
     expect(single.sections.quoteH ?? 0).toBeLessThan(multi.sections.quoteH ?? 0);
   });
+
+  it('indents quote_of_video media into the quote inner column', () => {
+    const outer = layoutXPost(assets());
+    const nested = layoutXPost(
+      assets({
+        layoutKind: 'quote_of_video',
+        quote: {
+          author: { name: 'Q', handle: 'q', verified: false },
+          text: { text: 'inside', displayText: 'inside' },
+          images: [],
+        },
+      }),
+    );
+    expect(nested.mediaSlot.x).toBeGreaterThan(outer.mediaSlot.x);
+    expect(nested.mediaSlot.w).toBeLessThan(outer.mediaSlot.w);
+    expect(nested.mediaSlot.cornerRadius).toBe(80);
+  });
 });
