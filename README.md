@@ -56,7 +56,7 @@ Pre-built images are published to [GHCR](https://github.com/camilopaezz/tikitoki
 | Tag | When |
 |-----|------|
 | `latest` | every push to `main` |
-| `<sha>` | every image build |
+| `<sha>` | every image build (PR head SHA on pull requests) |
 | `pr-<number>` | every pull request (same-repo) |
 
 ```yaml

@@ -46,6 +46,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # PRs default to the merge commit; pin the head so the SHA tag matches the PR.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Log in to GHCR
         uses: docker/login-action@v4
@@ -56,15 +59,17 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           flavor: |
             latest=false
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ github.sha }}
+            type=raw,value=${{ github.event.pull_request.head.sha || github.sha }}
             type=ref,event=pr
+          labels: |
+            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Build and push
         uses: docker/build-push-action@v7
