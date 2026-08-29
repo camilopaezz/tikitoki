@@ -7,6 +7,7 @@ import { NoVideoError } from '../fetch/noVideo.js';
 import { CooldownError } from '../job/cooldown.js';
 import { HourlyCapError } from '../job/hourlyCap.js';
 import { XRenderNotReadyError } from '../job/xrenderErrors.js';
+import { ProcessTimeoutError } from '../process/run.js';
 
 export { XRenderNotReadyError };
 
@@ -29,6 +30,9 @@ export function userFacingMessage(err: unknown): string {
   }
   if (err instanceof OversizedVideoError) {
     return `That video is too large to send (${(err.sizeBytes / 1024 / 1024).toFixed(1)} MB).`;
+  }
+  if (err instanceof ProcessTimeoutError) {
+    return 'Rendering that post took too long. Try again.';
   }
   if (err instanceof AuthFailureError) {
     return "Couldn't fetch that post right now. Please try again later.";

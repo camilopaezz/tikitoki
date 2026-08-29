@@ -99,6 +99,8 @@ services:
       - TARGET_SIZE_MB=${TARGET_SIZE_MB:-45}
       - CROSSFADE_SECONDS=${CROSSFADE_SECONDS:-0.4}
       - SILENT_SLIDE_SECONDS=${SILENT_SLIDE_SECONDS:-3}
+    init: true
+    shm_size: '1gb'
     volumes:
       - ./cookies:/app/cookies:ro
 ```
@@ -139,6 +141,7 @@ Needs Node 20+, `ffmpeg`, `yt-dlp`, and Chromium/Chrome for X feed-card renders.
 | Single images not supported | Send a carousel or reel instead |
 | Video too large | Source is over `TARGET_SIZE_MB`; try another share/quality |
 | Long slideshows look 720p | Automatic downscale to stay under size limits — expected |
+| X render stuck on “Rendering” | Headless Chromium hung — bot now times out (~20s) and kills it. Needs `init: true` and `shm_size: "1gb"` in compose |
 
 ---
 

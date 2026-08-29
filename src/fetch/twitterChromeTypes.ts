@@ -11,9 +11,12 @@ export interface XAuthorRemote {
 }
 
 export interface XTextBlock {
-  /** Raw syndication/API text (may include media t.co). */
+  /** Raw syndication/API text (may include media t.co / HTML entities). */
   text: string;
-  /** Visible caption after display_text_range (may be empty). */
+  /**
+   * Visible caption after display_text_range, HTML-entity decode, and t.co strip
+   * (may be empty). Plain text — chrome HTML escapes again at render time.
+   */
   displayText: string;
 }
 

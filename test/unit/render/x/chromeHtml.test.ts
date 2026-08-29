@@ -36,6 +36,8 @@ describe('buildChromeHtml', () => {
     expect(html).toContain('@brndxix');
     expect(html).toContain('#1e9cf1'); // verified badge
     expect(html).toContain('#00ff00'); // chroma-key media hole
+    expect(html).toContain('font-family: TwitterChirp');
+    expect(html).not.toContain('@font-face');
     expect(html).not.toMatch(/duration|mute|0:12|00:12/i);
   });
 
@@ -115,6 +117,25 @@ describe('buildChromeHtml', () => {
     };
     const html = buildChromeHtml(assets, layoutXPost(assets));
     expect(html).toMatch(/\.qtext\s*\{[^}]*-webkit-line-clamp:\s*3/s);
+  });
+
+  it('does not double-escape syndication HTML entities in caption text', () => {
+    const assets: XPostAssets = {
+      ...base,
+      outer: {
+        ...base.outer,
+        text: {
+          text: '&gt; You are a Claude agent &amp; friend',
+          // Simulate a caller that still has encoded displayText; truncate decodes first.
+          displayText: '&gt; You are a Claude agent &amp; friend',
+        },
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    const body = html.slice(html.indexOf('<body>'));
+    expect(body).toContain('&gt; You are a Claude agent &amp; friend');
+    expect(body).not.toContain('&amp;gt;');
+    expect(body).not.toContain('&amp;amp;');
   });
 
   it('places the media hole inside the quote card for quote_of_video', () => {
