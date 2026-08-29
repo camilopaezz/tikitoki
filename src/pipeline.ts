@@ -18,6 +18,7 @@ import type { Job, JobResult, Stage } from './job/types.js';
 import { renderSlideshow } from './render/renderSlideshow.js';
 import { renderXPost } from './render/x/renderXPost.js';
 import { createLogger } from './util/logger.js';
+import { isInstagramUrl, isTwitterUrl } from './util/postHost.js';
 import { createStopwatch } from './util/stopwatch.js';
 import { perJobDir } from './util/tmp.js';
 
@@ -28,14 +29,6 @@ export interface PipelineOptions {
 type Fetched =
   | { kind: 'video'; outputPath: string }
   | { kind: 'slideshow'; assets: SlideshowAssets };
-
-function isInstagramUrl(url: string): boolean {
-  return /instagram\.com/i.test(url);
-}
-
-function isTwitterUrl(url: string): boolean {
-  return /(?:twitter\.com|x\.com)/i.test(url);
-}
 
 async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise<Fetched> {
   const resolved = await resolveInstagramUrl(job.url, job.jobId);
@@ -193,7 +186,7 @@ export function createPipeline(options: PipelineOptions) {
 
     if (job.mode === 'xrender') {
       if (!isTwitterUrl(job.url)) {
-        throw new Error('/xrender only works with Twitter/X links.');
+        throw new Error('Feed-card render only works with Twitter/X links.');
       }
       return runXRender(job, jobDir, config, onStage, log);
     }

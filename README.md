@@ -1,8 +1,8 @@
 # tikitoki
 
-**Paste a TikTok, Instagram, or X link in Telegram — get a clean MP4 back.**
+**Paste a TikTok, Instagram, or X link in Telegram — tap Download — get a clean MP4 back.**
 
-No watermarks to hunt for, no “open in browser” detours. Send the bot a post URL and it downloads or renders the media so you can save it, forward it, or share it elsewhere.
+No watermarks to hunt for, no “open in browser” detours. Send the bot a post URL, confirm with the button, and it downloads or renders the media so you can save it, forward it, or share it elsewhere.
 
 ---
 
@@ -13,6 +13,8 @@ No watermarks to hunt for, no “open in browser” detours. Send the bot a post
 | **TikTok** | Download videos · turn photo slideshows into MP4s |
 | **Instagram** | Download reels · turn photo carousels into MP4 slideshows |
 | **X (Twitter)** | Download the video **or** render a dark feed-card clip of the post |
+
+Paste a link, then tap **Download video**. The job starts on that tap — if you're on cooldown, the bot tells you how long to wait and the button stays so you don't have to paste the URL again.
 
 ### TikTok
 - **Videos** — full post video as an MP4

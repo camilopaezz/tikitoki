@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHOICE_EXPIRED_MESSAGE,
+  choiceForUrl,
   extractPostUrl,
+  isChoicePromptMessage,
   isTwitterUrl,
   parseIntake,
   USAGE_MESSAGE,
+  VIDEO_CHOICE_MESSAGE,
   X_CHOICE_MESSAGE,
 } from '../../../src/bot/intake.js';
 
@@ -81,11 +85,18 @@ describe('isTwitterUrl', () => {
   it('matches x.com and twitter.com', () => {
     expect(isTwitterUrl('https://x.com/u/status/1')).toBe(true);
     expect(isTwitterUrl('https://twitter.com/u/status/1')).toBe(true);
+    expect(isTwitterUrl('https://www.x.com/u/status/1')).toBe(true);
+    expect(isTwitterUrl('https://mobile.twitter.com/u/status/1')).toBe(true);
   });
 
   it('rejects other hosts', () => {
     expect(isTwitterUrl('https://www.tiktok.com/@u/video/1')).toBe(false);
     expect(isTwitterUrl('https://instagram.com/reel/abc')).toBe(false);
+  });
+
+  it('does not treat x.com in a query string as an X post', () => {
+    expect(isTwitterUrl('https://www.tiktok.com/@u/video/1?ref=https://x.com/foo')).toBe(false);
+    expect(isTwitterUrl('https://not-x.com/status/1')).toBe(false);
   });
 });
 
@@ -109,17 +120,59 @@ describe('parseIntake', () => {
   });
 });
 
+describe('choiceForUrl', () => {
+  it('offers download and render for X URLs', () => {
+    expect(choiceForUrl('https://x.com/u/status/1')).toEqual({
+      message: X_CHOICE_MESSAGE,
+      buttons: [
+        { action: 'dl', label: 'Download video' },
+        { action: 'xr', label: 'Render post' },
+      ],
+    });
+  });
+
+  it('offers download only for TikTok and Instagram URLs', () => {
+    expect(choiceForUrl('https://www.tiktok.com/@u/video/1')).toEqual({
+      message: VIDEO_CHOICE_MESSAGE,
+      buttons: [{ action: 'dl', label: 'Download video' }],
+    });
+    expect(choiceForUrl('https://www.instagram.com/reel/abc')).toEqual({
+      message: VIDEO_CHOICE_MESSAGE,
+      buttons: [{ action: 'dl', label: 'Download video' }],
+    });
+  });
+
+  it('does not offer render when x.com only appears in a query string', () => {
+    expect(choiceForUrl('https://www.tiktok.com/@u/video/1?ref=https://x.com/foo').buttons).toEqual(
+      [{ action: 'dl', label: 'Download video' }],
+    );
+  });
+});
+
 describe('USAGE_MESSAGE', () => {
-  it('mentions TikTok, Instagram, Twitter/X, and the choice UX', () => {
+  it('mentions TikTok, Instagram, Twitter/X, and the tap-to-download UX', () => {
     expect(USAGE_MESSAGE).toMatch(/tiktok/i);
     expect(USAGE_MESSAGE).toMatch(/instagram/i);
     expect(USAGE_MESSAGE).toMatch(/twitter|x/i);
-    expect(USAGE_MESSAGE).toMatch(/download|render/i);
+    expect(USAGE_MESSAGE).toMatch(/download/i);
+    expect(USAGE_MESSAGE).toMatch(/tap/i);
     expect(USAGE_MESSAGE).not.toMatch(/\/xrender/i);
   });
 
   it('exports choice prompt copy', () => {
+    expect(VIDEO_CHOICE_MESSAGE).toMatch(/download/i);
     expect(X_CHOICE_MESSAGE).toMatch(/download/i);
     expect(X_CHOICE_MESSAGE).toMatch(/render/i);
+  });
+});
+
+describe('isChoicePromptMessage', () => {
+  it('matches confirm prompts only', () => {
+    expect(isChoicePromptMessage(VIDEO_CHOICE_MESSAGE)).toBe(true);
+    expect(isChoicePromptMessage(X_CHOICE_MESSAGE)).toBe(true);
+    expect(isChoicePromptMessage(CHOICE_EXPIRED_MESSAGE)).toBe(false);
+    expect(isChoicePromptMessage('Processing…')).toBe(false);
+    expect(isChoicePromptMessage('Done!')).toBe(false);
+    expect(isChoicePromptMessage(undefined)).toBe(false);
   });
 });

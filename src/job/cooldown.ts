@@ -1,6 +1,6 @@
 export class CooldownError extends Error {
   constructor(secondsRemaining: number) {
-    super(`Please wait ${Math.ceil(secondsRemaining)} seconds before sending another link.`);
+    super(`Please wait ${Math.ceil(secondsRemaining)} seconds before trying again.`);
     this.name = 'CooldownError';
   }
 }

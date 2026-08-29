@@ -111,7 +111,7 @@ so searchability stays one-to-one.
 
 - **Bounded concurrency** — at most 2 jobs running simultaneously, enforced
   via `p-queue`.
-- **Per-user cooldown** — a single user may submit at most 1 job per 30s.
+- **Per-user cooldown** — a single user may start at most 1 job per 30s. Checked on the confirm-button tap, not on URL paste. A miss answers the callback with seconds remaining and leaves the button in place.
 - **Global hourly cap** — at most 60 jobs/hour across all users, to protect
   the bot's IP from TikTok bans.
 - **Cloud Bot API** — Telegram's hosted API, 50 MB upload cap. What we
@@ -125,8 +125,16 @@ so searchability stays one-to-one.
 - **grammY** — the Telegram bot framework we use (native TypeScript, polling
   by default). Its `session` and `conversations` plugins back per-user
   cooldown state.
-- **Placeholder message** — the "Processing your TikTok..." text message a
-  job sends immediately and edits through *stages*.
+- **Confirm button** — after a URL paste, the bot replies with inline
+  button(s) (`Download video`, and `Render post` on X). The job starts only
+  when the user taps; cooldown/hourly-cap failures toast remaining time and
+  keep the button so the URL does not need to be re-sent.
+- **Pending choice** — in-memory token (10 min TTL) tying a pasted URL to
+  those buttons. Consumed when a tap passes limits; left in place on a
+  cooldown miss.
+- **Placeholder message** — the "Processing…" text a job edits through
+  *stages*. For a confirmed tap this is the choice message rewritten in
+  place (keyboard removed).
 - **Final video message** — the `sendVideo` containing `out.mp4`, sent as a
   new message when the job succeeds; the placeholder is then edited to done
   or deleted.
@@ -134,15 +142,15 @@ so searchability stays one-to-one.
 - **Cookies path** — `TIKTOKI_COOKIES_PATH` env var pointing at
   `cookies.txt`. Optional; when unset we run public-only.
 - **Job mode** — how a job should process a URL: *passthrough* (default
-  download/send) or *xrender* (Twitter/X feed-card composite). Carried on
-  `Job.mode` from intake into the pipeline.
-- **`/xrender`** — Telegram command that sets job mode to *xrender* for a
-  Twitter/X status URL. Plain paste of an X link stays *passthrough*.
+  download/send) or *xrender* (Twitter/X feed-card composite). Chosen by the
+  confirm button (`dl` → passthrough, `xr` → xrender) and carried on
+  `Job.mode` into the pipeline.
 
 ## X / xrender domain
 
 - **xrender** — feature/mode that composites an X mobile **feed card** around
-  a post’s primary video (ffmpeg overlay), invoked via `/xrender`.
+  a post’s primary video (ffmpeg overlay), started by the **Render post**
+  confirm button.
 - **Feed card** — dark-mode post chrome only (avatar, name, badge, handle,
   text, media, optional quote card). No phone bezel, status bar, or tab bar.
 - **Media hole / media slot** — rectangle in the feed card where the primary
