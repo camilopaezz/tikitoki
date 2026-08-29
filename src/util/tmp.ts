@@ -4,7 +4,10 @@ import { join } from 'node:path';
 import { createLogger } from './logger.js';
 
 const logger = createLogger();
-const BASE_DIR = join(tmpdir(), 'tikitoki');
+export const JOB_TMP_ROOT = join(tmpdir(), 'tikitoki');
+const BASE_DIR = JOB_TMP_ROOT;
+/** Entries under JOB_TMP_ROOT that are caches, not per-job dirs. */
+const PERSISTENT_TMP_ENTRIES = new Set(['fonts']);
 const STARTUP_SWEEP_AGE_MS = 60 * 60 * 1000; // 1 hour
 
 export function perJobDir(jobId: string): string {
@@ -30,6 +33,7 @@ export function startupSweep(): void {
     const entries = readdirSync(BASE_DIR);
     const now = Date.now();
     for (const entry of entries) {
+      if (PERSISTENT_TMP_ENTRIES.has(entry)) continue;
       const fullPath = join(BASE_DIR, entry);
       try {
         const stats = statSync(fullPath);

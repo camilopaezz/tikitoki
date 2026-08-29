@@ -18,6 +18,8 @@ Harvest **computed values**, not class names.
 | Handle / secondary | `#71767a` / `rgb(113,117,122)` | `text-gray-700` |
 | Borders | `#323639` 1px | `border-gray-200` (dark theme remap) |
 | Font | `TwitterChirp, -apple-system, …` (400/700 loaded) | `font-chirp` |
+| Chirp Regular | `https://abs.twimg.com/fonts/subset/Chirp-Regular.c88864db.latin.woff2` | 400 latin |
+| Chirp Bold | `https://abs.twimg.com/fonts/subset/Chirp-Bold.d8ac01b2.latin.woff2` | 700 latin |
 | Body type | 15px / 20px, weight 400 | `text-body` |
 | Name | 15px / 20px, weight 700, `line-clamp-1` | `text-body font-bold` |
 | Handle | 15px / 20px, `font-feature-settings: "ss01"` | same + `ss01` |

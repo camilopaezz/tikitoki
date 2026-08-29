@@ -11,3 +11,4 @@ ffmpeg2pass-*.log*
 package-lock.json
 bench-out/
 node_modules.docker
+assets/fonts/
