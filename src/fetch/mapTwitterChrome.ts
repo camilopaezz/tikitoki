@@ -1,4 +1,4 @@
-import { sliceDisplayText, upscaleAvatarUrl } from './truncateTweetText.js';
+import { decodeHtmlEntities, sliceDisplayText, upscaleAvatarUrl } from './truncateTweetText.js';
 import type {
   XAuthorRemote,
   XImageRemote,
@@ -62,7 +62,7 @@ export class TwitterChromeMapError extends Error {
 
 function mapAuthor(user: SyndicationUser | undefined): XAuthorRemote {
   return {
-    name: user?.name?.trim() || 'Unknown',
+    name: decodeHtmlEntities(user?.name?.trim() || 'Unknown'),
     handle: (user?.screen_name ?? '').replace(/^@/, ''),
     avatarUrl: upscaleAvatarUrl(user?.profile_image_url_https),
     verified: Boolean(user?.is_blue_verified || user?.verified),
