@@ -15,5 +15,7 @@ services:
       - TARGET_SIZE_MB=${TARGET_SIZE_MB:-45}
       - CROSSFADE_SECONDS=${CROSSFADE_SECONDS:-0.4}
       - SILENT_SLIDE_SECONDS=${SILENT_SLIDE_SECONDS:-3}
+    init: true
+    shm_size: '1gb'
     volumes:
       - ./cookies:/app/cookies:ro

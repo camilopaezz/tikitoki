@@ -13,6 +13,7 @@ import { TwitterChromeMapError } from '../../../src/fetch/mapTwitterChrome.js';
 import { NoVideoError } from '../../../src/fetch/noVideo.js';
 import { CooldownError } from '../../../src/job/cooldown.js';
 import { HourlyCapError } from '../../../src/job/hourlyCap.js';
+import { ProcessTimeoutError } from '../../../src/process/run.js';
 
 describe('userFacingMessage', () => {
   it('maps cooldown errors', () => {
@@ -67,6 +68,14 @@ describe('userFacingMessage', () => {
     expect(userFacingMessage(new NoVideoError())).toBe(
       "That post doesn't have a downloadable video.",
     );
+  });
+
+  it('maps process timeouts without leaking the command', () => {
+    const msg = userFacingMessage(
+      new ProcessTimeoutError('chromium --headless=new', ['--headless=new'], 20_000),
+    );
+    expect(msg).toMatch(/too long/i);
+    expect(msg).not.toMatch(/chromium/i);
   });
 
   it('does not leak platform names into the auth failure message', () => {
