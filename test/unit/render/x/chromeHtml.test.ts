@@ -102,6 +102,32 @@ describe('buildChromeHtml', () => {
     expect(html).toMatch(/aspect-ratio:\s*16\s*\/\s*9/);
   });
 
+  it('gives outer caption more visual lines than the quote card', () => {
+    const assets: XPostAssets = {
+      ...base,
+      outer: {
+        ...base.outer,
+        text: {
+          text: '*Lo funan por Groomer*\n\nOtros: "era humor de la época, un pobre bebé de 40 años".\n\nMi Mundo Alex:',
+          displayText:
+            '*Lo funan por Groomer*\n\nOtros: "era humor de la época, un pobre bebé de 40 años".\n\nMi Mundo Alex:',
+        },
+      },
+      layoutKind: 'video_quotes',
+      quote: {
+        author: { name: 'Q', handle: 'q', verified: false },
+        text: { text: 'short', displayText: 'short' },
+        images: [],
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    expect(html).toMatch(/\.text\s*\{[^}]*-webkit-line-clamp:\s*10/s);
+    expect(html).toMatch(/\.qtext\s*\{[^}]*-webkit-line-clamp:\s*3/s);
+    const body = html.slice(html.indexOf('<body>'));
+    expect(body).toContain('pobre bebé de 40 años');
+    expect(body).toContain('Mi Mundo Alex:');
+  });
+
   it('clamps quote body to 3 visual lines', () => {
     const assets: XPostAssets = {
       ...base,

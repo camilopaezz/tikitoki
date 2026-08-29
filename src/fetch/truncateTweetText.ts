@@ -56,7 +56,8 @@ export function stripTcoUrls(text: string): string {
 }
 
 /**
- * Truncate tweet text for feed-card chrome (~2–3 lines).
+ * Truncate tweet text for feed-card chrome.
+ * Callers pick the budget (outer caption is looser than quote cards).
  * Keeps hard line breaks **and blank lines** (paragraph gaps in X captions).
  * Collapses only horizontal whitespace / runs of empty lines.
  * Prefers a word boundary when maxChars cuts mid-word.
