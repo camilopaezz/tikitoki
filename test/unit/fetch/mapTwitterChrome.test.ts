@@ -68,6 +68,34 @@ describe('mapTwitterChrome', () => {
     expect(chrome.quote?.images).toEqual([]);
   });
 
+  it('decodes HTML entities in captions and author names', () => {
+    const raw: SyndicationTweet = {
+      id_str: '2',
+      text: '&gt; tip &amp; tricks https://t.co/abc',
+      // "&gt; tip &amp; tricks" is 21 UTF-16 units in the encoded syndication string.
+      display_text_range: [0, 21],
+      user: {
+        name: 'Tom &amp; Jerry',
+        screen_name: 'tj',
+        is_blue_verified: false,
+      },
+      mediaDetails: [
+        {
+          type: 'video',
+          video_info: {
+            variants: [
+              { content_type: 'video/mp4', url: 'https://video.twimg.com/a.mp4', bitrate: 1000 },
+            ],
+          },
+        },
+      ],
+    };
+
+    const chrome = mapTwitterChrome(raw, { sourceUrl: 'https://x.com/tj/status/2' });
+    expect(chrome.outer.author.name).toBe('Tom & Jerry');
+    expect(chrome.outer.text.displayText).toBe('> tip & tricks');
+  });
+
   it('maps a synthetic simple_video tweet', () => {
     const raw: SyndicationTweet = {
       id_str: '1',

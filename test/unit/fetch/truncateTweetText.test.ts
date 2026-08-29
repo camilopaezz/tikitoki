@@ -1,10 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import {
+  decodeHtmlEntities,
   sliceDisplayText,
   stripTcoUrls,
   truncateTweetText,
   upscaleAvatarUrl,
 } from '../../../src/fetch/truncateTweetText.js';
+
+describe('decodeHtmlEntities', () => {
+  it('decodes common named entities from syndication text', () => {
+    expect(decodeHtmlEntities('&gt; You are a Claude agent')).toBe('> You are a Claude agent');
+    expect(decodeHtmlEntities('a &amp; b &lt; c')).toBe('a & b < c');
+    expect(decodeHtmlEntities('say &quot;hi&quot;')).toBe('say "hi"');
+  });
+
+  it('decodes decimal and hex numeric entities', () => {
+    expect(decodeHtmlEntities('&#62; tip')).toBe('> tip');
+    expect(decodeHtmlEntities('&#x3e; tip')).toBe('> tip');
+    expect(decodeHtmlEntities('&#x3E; tip')).toBe('> tip');
+  });
+
+  it('keeps a literally typed &gt; sequence when the API single-encoded it as &amp;gt;', () => {
+    expect(decodeHtmlEntities('type &amp;gt; here')).toBe('type &gt; here');
+  });
+
+  it('is a no-op when there is no ampersand', () => {
+    expect(decodeHtmlEntities('plain > text')).toBe('plain > text');
+  });
+});
 
 describe('stripTcoUrls', () => {
   it('removes bare media t.co captions', () => {
@@ -32,6 +55,11 @@ describe('sliceDisplayText', () => {
 
   it('returns full trimmed text when range missing', () => {
     expect(sliceDisplayText('  hi  ', undefined)).toBe('hi');
+  });
+
+  it('decodes entities after applying display_text_range on the encoded string', () => {
+    // Range indexes the encoded payload: "&gt; hi" is 7 UTF-16 units.
+    expect(sliceDisplayText('&gt; hi https://t.co/x', [0, 7])).toBe('> hi');
   });
 });
 
@@ -72,6 +100,13 @@ describe('truncateTweetText', () => {
     const out = truncateTweetText(long, 3, 40);
     expect(out.endsWith('…')).toBe(true);
     expect(out.length).toBeLessThanOrEqual(42);
+  });
+
+  it('counts maxChars on decoded text so entity markup does not inflate length', () => {
+    // 20× "&gt;" = 80 entity chars but only 20 ">" glyphs.
+    const encoded = '&gt;'.repeat(20);
+    expect(truncateTweetText(encoded, 3, 20)).toBe('>'.repeat(20));
+    expect(truncateTweetText(encoded, 3, 10)).toBe(`${'>'.repeat(10)}…`);
   });
 });
 

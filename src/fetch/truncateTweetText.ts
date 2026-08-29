@@ -1,6 +1,46 @@
 /** Twitter short links (media attachments / auto-appended). Never show in chrome. */
 const TCO_URL_RE = /https?:\/\/t\.co\/[A-Za-z0-9]+/gi;
 
+const NAMED_HTML_ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+};
+
+/**
+ * Decode HTML entities that syndication/API text often embeds (`&gt;`, `&amp;`, `&#62;`).
+ *
+ * Must run **after** `display_text_range` slicing (ranges index the encoded string) and
+ * **before** HTML escaping in chrome — otherwise `esc()` turns `&gt;` into `&amp;gt;`
+ * and Chromium screenshots show the literal entity.
+ *
+ * `&amp;` is applied last so a single-encoded payload stays correct
+ * (`&amp;gt;` → literal `&gt;`, not `>`).
+ */
+export function decodeHtmlEntities(text: string): string {
+  if (!text || !text.includes('&')) return text;
+  return text
+    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, body: string) => {
+      const key = body.toLowerCase();
+      if (key[0] === '#') {
+        const codePoint =
+          key[1] === 'x' ? Number.parseInt(key.slice(2), 16) : Number.parseInt(key.slice(1), 10);
+        if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return match;
+        try {
+          return String.fromCodePoint(codePoint);
+        } catch {
+          return match;
+        }
+      }
+      if (key === 'amp') return match; // deferred — see second pass
+      return NAMED_HTML_ENTITIES[key] ?? match;
+    })
+    .replace(/&amp;/gi, '&');
+}
+
 /**
  * Drop t.co URLs and tidy leftover whitespace. Media-only captions become "".
  */
@@ -22,7 +62,8 @@ export function stripTcoUrls(text: string): string {
  * Prefers a word boundary when maxChars cuts mid-word.
  */
 export function truncateTweetText(text: string, maxLines = 3, maxChars = 140): string {
-  const stripped = stripTcoUrls(text);
+  // Decode first so maxChars counts visible glyphs (`&gt;` → `>`), not entity markup.
+  const stripped = stripTcoUrls(decodeHtmlEntities(text));
   if (!stripped) return '';
 
   // Split on single newlines so "" between paragraphs survives (X blank lines).
@@ -88,7 +129,8 @@ export function sliceDisplayText(
     if (end <= start) return '';
     sliced = text.slice(start, end).trim();
   }
-  return stripTcoUrls(sliced);
+  // Range indexes the encoded syndication string; decode only after slicing.
+  return stripTcoUrls(decodeHtmlEntities(sliced));
 }
 
 /** Prefer higher-res avatar from twimg `_normal` / `_200x200` URLs. */
