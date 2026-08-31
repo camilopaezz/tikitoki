@@ -546,4 +546,17 @@ describe('createPipeline', () => {
     expect(downloadVideo).not.toHaveBeenCalled();
     expect(renderSlideshow).not.toHaveBeenCalled();
   });
+
+  it('rejects xrender for non-Twitter URLs', async () => {
+    const job = {
+      ...baseJob(),
+      url: 'https://www.tiktok.com/@u/video/1',
+      mode: 'xrender' as const,
+    };
+    const runPipeline = createPipeline({ config });
+    await expect(runPipeline(job, async () => {})).rejects.toThrow(
+      'Feed-card render only works with Twitter/X links.',
+    );
+    expect(renderXPost).not.toHaveBeenCalled();
+  });
 });

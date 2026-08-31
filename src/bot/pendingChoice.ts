@@ -10,9 +10,9 @@ export interface PendingChoice {
 
 export const PENDING_CHOICE_TTL_MS = 10 * 60 * 1000;
 
-const CALLBACK_PREFIX = 'x:';
+const CALLBACK_PREFIX = 'c:';
 
-/** In-memory pending X URL choices keyed by short token. */
+/** In-memory pending URL confirmations keyed by short token. */
 export class PendingChoiceStore {
   private readonly map = new Map<string, PendingChoice>();
 
@@ -73,7 +73,8 @@ export function encodeCallbackData(action: ChoiceAction, token: string): string 
 export function parseCallbackData(
   data: string,
 ): { action: ChoiceAction; token: string } | undefined {
-  const match = /^x:(dl|xr):([a-f0-9]+)$/.exec(data);
+  if (!data.startsWith(CALLBACK_PREFIX)) return undefined;
+  const match = /^(dl|xr):([a-f0-9]+)$/.exec(data.slice(CALLBACK_PREFIX.length));
   if (!match) return undefined;
   return { action: match[1] as ChoiceAction, token: match[2] };
 }

@@ -21,7 +21,9 @@ const FONT_SIZE = 42; // 15
 const LINE_HEIGHT = 56; // 20
 const NAME_LINE = LINE_HEIGHT;
 const TEXT_LINE = LINE_HEIGHT;
-const TEXT_MAX_LINES = 3;
+/** Outer caption budget. Quote cards stay at 3 / 140 in chromeHtml.ts. */
+const TEXT_MAX_LINES = 10;
+const OUTER_TEXT_MAX_CHARS = 280;
 const TEXT_MARGIN_TOP = 6; // 2 (gap-0.5)
 const NAME_ROW_GAP = 11; // 4 (gap-1)
 const GAP_HEADER_MEDIA = 33; // 12 (gap-3)
@@ -124,7 +126,9 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
   const quoteInnerW = quoteInnerWidth(textColW);
   const mediaFitW = videoInsideQuote ? quoteInnerW : textColW;
 
-  const hasOuterText = Boolean(truncateTweetText(assets.outer.text.displayText, 3, 180));
+  const hasOuterText = Boolean(
+    truncateTweetText(assets.outer.text.displayText, TEXT_MAX_LINES, OUTER_TEXT_MAX_CHARS),
+  );
   const textH = hasOuterText ? TEXT_MAX_LINES * TEXT_LINE : 0;
   const nameBlockH = NAME_LINE + (textH > 0 ? TEXT_MARGIN_TOP + textH : 0);
   const headerH = Math.max(AVATAR, nameBlockH);
@@ -209,6 +213,8 @@ export const X_LAYOUT_CONSTANTS = {
   BADGE,
   MAX_MEDIA_H_RATIO,
   TEXT_LINE,
+  TEXT_MAX_LINES,
+  OUTER_TEXT_MAX_CHARS,
   GAP_HEADER_MEDIA,
   GAP_MEDIA_QUOTE,
   NAME_LINE,

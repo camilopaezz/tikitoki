@@ -26,4 +26,10 @@ describe('UserCooldown', () => {
     cooldown.trySubmit(1, 0);
     expect(() => cooldown.trySubmit(2, 1000)).not.toThrow();
   });
+
+  it('reset clears the cooldown so the user can submit immediately', () => {
+    cooldown.trySubmit(1, 0);
+    cooldown.reset(1);
+    expect(() => cooldown.trySubmit(1, 1000)).not.toThrow();
+  });
 });

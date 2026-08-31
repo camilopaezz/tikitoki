@@ -71,7 +71,8 @@ describe('callback data helpers', () => {
 
   it('rejects unknown callback data', () => {
     expect(parseCallbackData('other')).toBeUndefined();
-    expect(parseCallbackData('x:zz:abc')).toBeUndefined();
+    expect(parseCallbackData('x:dl:deadbeefcafebabe')).toBeUndefined();
+    expect(parseCallbackData('c:zz:deadbeefcafebabe')).toBeUndefined();
   });
 
   it('maps actions to job modes', () => {

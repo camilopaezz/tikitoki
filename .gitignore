@@ -3,6 +3,7 @@ dist/
 cookies.txt
 cookies/
 data/
+assets/
 .env
 *.log
 .DS_Store

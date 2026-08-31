@@ -47,7 +47,11 @@ function mediaHoleHtml(slot: XPostLayout['mediaSlot']): string {
  */
 export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): string {
   const { width, height } = layout.canvas;
-  const outerText = truncateTweetText(assets.outer.text.displayText, 3, 180);
+  const outerText = truncateTweetText(
+    assets.outer.text.displayText,
+    X_LAYOUT_CONSTANTS.TEXT_MAX_LINES,
+    X_LAYOUT_CONSTANTS.OUTER_TEXT_MAX_CHARS,
+  );
   const slot = layout.mediaSlot;
   const padX = layout.padX;
   const colW = width - padX * 2;
@@ -58,6 +62,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     HEADER_GAP,
     FONT_SIZE,
     LINE_HEIGHT,
+    TEXT_MAX_LINES,
     TEXT_MARGIN_TOP,
     NAME_ROW_GAP,
     GAP_HEADER_MEDIA,
@@ -214,7 +219,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     word-break: break-word;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: ${TEXT_MAX_LINES};
     overflow: hidden;
   }
   .media-wrap {

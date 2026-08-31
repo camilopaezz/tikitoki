@@ -8,12 +8,12 @@ import type { Job, JobMode, JobResult, Stage } from '../job/types.js';
 import { createLogger } from '../util/logger.js';
 import { isOperatorAlert, operatorAlertMessage, userFacingMessage } from './errors.js';
 import {
-  isTwitterUrl,
+  CHOICE_EXPIRED_MESSAGE,
+  CHOICE_WRONG_USER_MESSAGE,
+  choiceForUrl,
+  isChoicePromptMessage,
   parseIntake,
   USAGE_MESSAGE,
-  X_CHOICE_EXPIRED_MESSAGE,
-  X_CHOICE_MESSAGE,
-  X_CHOICE_WRONG_USER_MESSAGE,
 } from './intake.js';
 import {
   encodeCallbackData,
@@ -21,7 +21,7 @@ import {
   PendingChoiceStore,
   parseCallbackData,
 } from './pendingChoice.js';
-import { sendPlaceholder } from './placeholder.js';
+import { PROCESSING_MESSAGE, sendPlaceholder } from './placeholder.js';
 import { sendVideo } from './send.js';
 import { createStageEditor, stageHandler } from './stageUpdates.js';
 
@@ -64,8 +64,9 @@ export function createBot(deps: BotDependencies): BotInstance {
     url: string;
     mode: JobMode;
     placeholderId: number;
+    chatId: number;
   }) {
-    const { ctx, userId, url, mode, placeholderId } = opts;
+    const { ctx, userId, url, mode, placeholderId, chatId } = opts;
 
     await slotPool.add(async () => {
       try {
@@ -74,7 +75,7 @@ export function createBot(deps: BotDependencies): BotInstance {
           url,
           mode,
           worker,
-          onStage: stageHandler(createStageEditor(ctx, placeholderId)),
+          onStage: stageHandler(createStageEditor(ctx, placeholderId, chatId)),
           deliver: async (result) => {
             await sendVideo(ctx, placeholderId, result.outputPath);
           },
@@ -86,7 +87,7 @@ export function createBot(deps: BotDependencies): BotInstance {
           logger.error(alert, { userId });
           await alertOperator(alert);
         }
-        await ctx.api.editMessageText(ctx.chat?.id ?? 0, placeholderId, userFacingMessage(err));
+        await ctx.api.editMessageText(chatId, placeholderId, userFacingMessage(err));
       }
     });
   }
@@ -102,41 +103,23 @@ export function createBot(deps: BotDependencies): BotInstance {
       return;
     }
 
-    // X/Twitter: offer download vs feed-card render; job starts on button press.
-    if (isTwitterUrl(intake.url)) {
-      const chatId = ctx.chat?.id;
-      if (chatId == null) return;
+    // Confirm via inline button so cooldown can toast remaining time on tap
+    // without forcing the user to paste the URL again.
+    const chatId = ctx.chat?.id;
+    if (chatId == null) return;
 
-      const token = pendingChoices.create({
-        url: intake.url,
-        userId,
-        chatId,
-      });
-
-      const keyboard = new InlineKeyboard()
-        .text('Download video', encodeCallbackData('dl', token))
-        .text('Render post', encodeCallbackData('xr', token));
-
-      await ctx.reply(X_CHOICE_MESSAGE, { reply_markup: keyboard });
-      return;
-    }
-
-    try {
-      cooldown.trySubmit(userId);
-      hourlyCap.tryStart();
-    } catch (err) {
-      await ctx.reply(userFacingMessage(err));
-      return;
-    }
-
-    const placeholderId = await sendPlaceholder(ctx);
-    await startJob({
-      ctx,
-      userId,
+    const token = pendingChoices.create({
       url: intake.url,
-      mode: 'passthrough',
-      placeholderId,
+      userId,
+      chatId,
     });
+    const prompt = choiceForUrl(intake.url);
+    const keyboard = new InlineKeyboard();
+    for (const button of prompt.buttons) {
+      keyboard.text(button.label, encodeCallbackData(button.action, token));
+    }
+
+    await ctx.reply(prompt.message, { reply_markup: keyboard });
   });
 
   bot.on('callback_query:data', async (ctx) => {
@@ -153,60 +136,76 @@ export function createBot(deps: BotDependencies): BotInstance {
       return;
     }
 
+    const callbackMsg = ctx.callbackQuery.message;
+    const callbackText = callbackMsg && 'text' in callbackMsg ? callbackMsg.text : undefined;
+
     const pending = pendingChoices.peek(parsed.token);
     if (!pending) {
-      await ctx.answerCallbackQuery({ text: X_CHOICE_EXPIRED_MESSAGE, show_alert: true });
-      try {
-        await ctx.editMessageText(X_CHOICE_EXPIRED_MESSAGE);
-      } catch {
-        // Message may already be gone or not editable.
+      await ctx.answerCallbackQuery({ text: CHOICE_EXPIRED_MESSAGE, show_alert: true });
+      // Only rewrite unused confirm prompts. A leftover tap on a live
+      // placeholder must not clobber Processing/stage/Done text.
+      if (isChoicePromptMessage(callbackText)) {
+        try {
+          await ctx.editMessageText(CHOICE_EXPIRED_MESSAGE);
+        } catch {
+          // Message may already be gone or not editable.
+        }
       }
       return;
     }
 
     if (pending.userId !== userId) {
-      await ctx.answerCallbackQuery({ text: X_CHOICE_WRONG_USER_MESSAGE, show_alert: true });
+      await ctx.answerCallbackQuery({ text: CHOICE_WRONG_USER_MESSAGE, show_alert: true });
+      return;
+    }
+
+    const allowed = new Set(choiceForUrl(pending.url).buttons.map((b) => b.action));
+    if (!allowed.has(parsed.action)) {
+      await ctx.answerCallbackQuery();
       return;
     }
 
     try {
       cooldown.trySubmit(userId);
-      hourlyCap.tryStart();
     } catch (err) {
       await ctx.answerCallbackQuery({ text: userFacingMessage(err), show_alert: true });
       return;
     }
 
-    // Consume only after auth + limits so a rate-limit failure keeps the choice.
+    try {
+      hourlyCap.tryStart();
+    } catch (err) {
+      cooldown.reset(userId);
+      await ctx.answerCallbackQuery({ text: userFacingMessage(err), show_alert: true });
+      return;
+    }
+
+    // Consume only after auth + limits so a cooldown miss keeps the button.
     const claimed = pendingChoices.take(parsed.token);
     if (!claimed) {
-      await ctx.answerCallbackQuery({ text: X_CHOICE_EXPIRED_MESSAGE, show_alert: true });
+      await ctx.answerCallbackQuery({ text: CHOICE_EXPIRED_MESSAGE, show_alert: true });
       return;
     }
 
     const mode = modeFromAction(parsed.action);
     await ctx.answerCallbackQuery();
 
-    const placeholderId = ctx.callbackQuery.message?.message_id;
-    const chatId = ctx.callbackQuery.message?.chat.id ?? claimed.chatId;
+    const chatId = callbackMsg?.chat.id ?? claimed.chatId;
+    let placeholderId = callbackMsg?.message_id;
 
-    if (placeholderId == null) {
-      // Fallback: new placeholder if chooser message is missing.
-      const id = await sendPlaceholder(ctx);
-      await startJob({
-        ctx,
-        userId,
-        url: claimed.url,
-        mode,
-        placeholderId: id,
-      });
-      return;
+    if (placeholderId != null) {
+      try {
+        await ctx.api.editMessageText(chatId, placeholderId, PROCESSING_MESSAGE, {
+          reply_markup: { inline_keyboard: [] },
+        });
+      } catch (err) {
+        logger.error(`Failed to edit choice message: ${(err as Error).message}`);
+        placeholderId = undefined;
+      }
     }
 
-    try {
-      await ctx.api.editMessageText(chatId, placeholderId, 'Processing…');
-    } catch (err) {
-      logger.error(`Failed to edit choice message: ${(err as Error).message}`);
+    if (placeholderId == null) {
+      placeholderId = await sendPlaceholder(ctx);
     }
 
     await startJob({
@@ -215,6 +214,7 @@ export function createBot(deps: BotDependencies): BotInstance {
       url: claimed.url,
       mode,
       placeholderId,
+      chatId,
     });
   });
 
