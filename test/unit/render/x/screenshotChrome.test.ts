@@ -60,6 +60,7 @@ describe('screenshotChrome', () => {
     const chromeOpts = chromeCall?.[2] as { timeoutMs: number; jobId: string };
 
     expect(args).toContain('--headless=new');
+    expect(args).not.toContain('--enable-unsafe-swiftshader');
     expect(args).toContain('--disable-dev-shm-usage');
     expect(args).toContain('--no-first-run');
     expect(args).toContain('--disable-background-networking');
@@ -78,6 +79,42 @@ describe('screenshotChrome', () => {
     const ffmpegCall = runProcess.mock.calls.find((call) => call[0] === 'ffmpeg');
     expect(ffmpegCall).toBeDefined();
     expect(ffmpegCall?.[2]?.timeoutMs).toBeUndefined();
+  });
+
+  it('uses old headless + SwiftShader for chromium-headless-shell', async () => {
+    await screenshotChrome({ ...opts, chromiumBin: 'chromium-headless-shell' });
+
+    const chromeCall = runProcess.mock.calls.find((call) => call[0] === 'chromium-headless-shell');
+    expect(chromeCall).toBeDefined();
+    const args = chromeCall?.[1] as string[];
+    expect(args).toContain('--headless');
+    expect(args).not.toContain('--headless=new');
+    expect(args).toContain('--enable-unsafe-swiftshader');
+    expect(args).toContain('--screenshot=/tmp/job/xchrome/chrome.png');
+  });
+
+  it('prefers chromium-headless-shell on PATH', async () => {
+    runProcess.mockImplementation(async (cmd: string, args?: unknown) => {
+      if (cmd === 'which') {
+        const bin = Array.isArray(args) ? args[0] : undefined;
+        if (bin === 'chromium-headless-shell') {
+          return { stdout: '/usr/bin/chromium-headless-shell', stderr: '', exitCode: 0 };
+        }
+        throw new Error('not found');
+      }
+      return { stdout: '', stderr: '', exitCode: 0 };
+    });
+
+    await screenshotChrome({
+      html: opts.html,
+      jobDir: opts.jobDir,
+      width: opts.width,
+      height: opts.height,
+      jobId: opts.jobId,
+    });
+
+    expect(runProcess.mock.calls.some((call) => call[0] === 'chromium-headless-shell')).toBe(true);
+    expect(runProcess.mock.calls.some((call) => call[0] === 'chromium')).toBe(false);
   });
 
   it('maps a Chromium ProcessError without a PNG to ProcessTimeoutError', async () => {
