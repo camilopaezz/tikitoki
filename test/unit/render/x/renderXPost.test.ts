@@ -22,11 +22,11 @@ describe('renderXPost', () => {
   it('screenshots, measures hole, crops, then single-pass ffmpeg when max bitrate binds', async () => {
     const screenshotFn = vi.fn().mockResolvedValue('/tmp/job/xchrome/chrome.png');
     const measureFn = vi.fn().mockResolvedValue({
-      x: 44,
+      x: 176,
       y: 120,
       contentHeight: 900,
-      greenW: 992,
-      greenH: 558,
+      greenW: 498,
+      greenH: 280,
     });
     const cropFn = vi.fn().mockResolvedValue(undefined);
     const runFfmpegFn = vi.fn().mockResolvedValue({ stdout: '', stderr: '', code: 0 });
@@ -46,8 +46,9 @@ describe('renderXPost', () => {
     expect(result.timings).toBeDefined();
     expect(result.timings.encode).toBeTypeOf('number');
     expect(screenshotFn).toHaveBeenCalledOnce();
+    expect(screenshotFn).toHaveBeenCalledWith(expect.objectContaining({ width: 720, jobId: 'jx' }));
     expect(measureFn).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', { jobId: 'jx' });
-    expect(cropFn).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', 1080, 900, { jobId: 'jx' });
+    expect(cropFn).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', 720, 900, { jobId: 'jx' });
     // Short clip → max bitrate binds → single pass
     expect(runFfmpegFn).toHaveBeenCalledTimes(1);
 
@@ -61,7 +62,7 @@ describe('renderXPost', () => {
     expect(args).toContain('0:a?');
     expect(args).toContain('aac');
     // Overlay uses measured media Y, not the placeholder estimate.
-    expect(args.join(' ')).toContain('overlay=44:120');
+    expect(args.join(' ')).toContain('overlay=176:120');
     expect(args.join(' ')).toContain('filter_complex');
     const bIdx = args.indexOf('-b:v');
     expect(bIdx).toBeGreaterThan(-1);
@@ -71,11 +72,11 @@ describe('renderXPost', () => {
   it('uses two-pass encode when the size budget binds (long clip)', async () => {
     const screenshotFn = vi.fn().mockResolvedValue('/tmp/job/xchrome/chrome.png');
     const measureFn = vi.fn().mockResolvedValue({
-      x: 44,
+      x: 176,
       y: 120,
       contentHeight: 900,
-      greenW: 992,
-      greenH: 558,
+      greenW: 498,
+      greenH: 280,
     });
     const cropFn = vi.fn().mockResolvedValue(undefined);
     const runFfmpegFn = vi.fn().mockResolvedValue({ stdout: '', stderr: '', code: 0 });

@@ -41,7 +41,8 @@ export interface RenderXPostResult {
  *
  * Encode: single-pass VBV when the 4 Mbps cap binds (short clips — size has
  * headroom). Two-pass when the Telegram size budget binds (long clips) so
- * average bitrate stays honest.
+ * average bitrate stays honest. Canvas is already 720-wide (WhatsApp HD);
+ * there is no further bitrate-driven downscale.
  */
 export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPostResult> {
   const log = createLogger({ jobId: opts.jobId });
@@ -82,22 +83,17 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
   sw.lap('crop');
 
   const duration = opts.assets.primaryVideo.durationSec;
-  let canvas = layout.canvas;
-  let budget = computeBitrateBudget(opts.targetSizeMb ?? 45, duration, canvas.width, canvas.height);
-
-  let filterLayout = layout;
-  if (budget.needsDownscale) {
-    const w = Math.round(720 / 2) * 2;
-    const h = Math.round((canvas.height * (720 / canvas.width)) / 2) * 2;
-    log.info(`xrender budget low; downscaling canvas to ${w}x${h}`);
-    filterLayout = scaleLayout(layout, w / canvas.width);
-    canvas = filterLayout.canvas;
-    budget = computeBitrateBudget(opts.targetSizeMb ?? 45, duration, w, h);
-  }
+  const canvas = layout.canvas;
+  const budget = computeBitrateBudget(
+    opts.targetSizeMb ?? 45,
+    duration,
+    canvas.width,
+    canvas.height,
+  );
   sw.lap('budget');
 
   const filterComplex = buildXOverlayFiltergraph({
-    layout: filterLayout,
+    layout,
     videoWidth: opts.assets.primaryVideo.width,
     videoHeight: opts.assets.primaryVideo.height,
     durationSec: duration,
@@ -240,35 +236,6 @@ function applyMeasuredChrome(
       ...layout.sections,
       mediaTop: y,
       headerH: Math.max(0, y - 12),
-    },
-  };
-}
-
-function scaleLayout(layout: XPostLayout, factor: number): XPostLayout {
-  const even = (n: number) => {
-    const r = Math.round(n);
-    return r % 2 === 0 ? r : r + 1;
-  };
-  const s = (n: number) => even(n * factor);
-  return {
-    ...layout,
-    canvas: { width: s(layout.canvas.width), height: s(layout.canvas.height) },
-    contentWidth: s(layout.contentWidth),
-    padX: s(layout.padX),
-    mediaSlot: {
-      ...layout.mediaSlot,
-      x: s(layout.mediaSlot.x),
-      y: s(layout.mediaSlot.y),
-      w: s(layout.mediaSlot.w),
-      h: s(layout.mediaSlot.h),
-      cornerRadius: s(layout.mediaSlot.cornerRadius),
-    },
-    sections: {
-      headerH: s(layout.sections.headerH),
-      textH: s(layout.sections.textH),
-      mediaTop: s(layout.sections.mediaTop),
-      quoteTop: layout.sections.quoteTop !== undefined ? s(layout.sections.quoteTop) : undefined,
-      quoteH: layout.sections.quoteH !== undefined ? s(layout.sections.quoteH) : undefined,
     },
   };
 }

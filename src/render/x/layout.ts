@@ -2,12 +2,21 @@ import type { XPostAssets } from '../../fetch/downloadXAssets.js';
 import { truncateTweetText } from '../../fetch/truncateTweetText.js';
 import type { XMediaFit, XPostLayout } from './types.js';
 
-/** Fixed feed column width (even). */
-export const XRENDER_WIDTH = 1080;
+/**
+ * Fixed feed column width (even).
+ * 720 so WhatsApp HD (720p video, always re-encoded) does not downscale
+ * the chrome. Type tokens stay at the 1080-scale (~42px) so glyphs stay
+ * fat after that second H.264 pass.
+ */
+export const XRENDER_WIDTH = 720;
+
+/** WhatsApp HD long edge. Taller canvases still get downscaled on forward. */
+export const XRENDER_MAX_HEIGHT = 1280;
 
 /**
  * 390 CSS-px feed tokens × 1080/390 ≈ 2.769, measured 2026-08-27 on live x.com.
- * Spacing tokens must match chromeHtml.ts document-flow styles.
+ * Kept at 1080-scale on a 720 canvas (not re-derived × 720/390) so Chirp
+ * stays ~42px. Spacing tokens must match chromeHtml.ts document-flow styles.
  * Vertical media Y is NOT trusted from this module — Chromium lays out text,
  * then measureChromePng() reads the green hole. These numbers only size the
  * media slot and provide a tall-enough screenshot window upper bound.
@@ -174,6 +183,25 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
     } else {
       quoteTop = afterHeader + media.h + GAP_MEDIA_QUOTE;
       height = quoteTop + quoteH + PAD_BOTTOM;
+    }
+  }
+
+  const canvasH = even(height);
+  if (canvasH > XRENDER_MAX_HEIGHT) {
+    const overflow = canvasH - XRENDER_MAX_HEIGHT;
+    const newH = Math.max(2, evenFloor(mediaSlot.h - overflow));
+    const aspect = mediaSlot.w / mediaSlot.h;
+    const delta = mediaSlot.h - newH;
+    mediaSlot.h = newH;
+    mediaSlot.w = Math.max(2, even(newH * aspect));
+    if (videoInsideQuote && quoteH !== undefined) {
+      quoteH = even(quoteH - delta);
+      height = (quoteTop ?? 0) + quoteH + PAD_BOTTOM;
+    } else if (quoteTop !== undefined) {
+      quoteTop -= delta;
+      height = quoteTop + (quoteH ?? 0) + PAD_BOTTOM;
+    } else {
+      height = afterHeader + newH + PAD_BOTTOM;
     }
   }
 

@@ -410,7 +410,7 @@ FxTwitter fallback still optional later.
 
 ### 3a — Geometry (no browser)
 
-- [x] `src/render/x/layout.ts` — `XRENDER_WIDTH = 1080`, dynamic height
+- [x] `src/render/x/layout.ts` — `XRENDER_WIDTH = 720`, dynamic height (WhatsApp HD is 720p)
 - [x] Media fit: landscape/square **contain**, tall **cover** (clamped)
 - [x] Quote card height for text ± images
 - [x] Unit tests for slot fit + quote growth
@@ -433,7 +433,7 @@ FxTwitter fallback still optional later.
 - [x] `src/render/x/filtergraph.ts` — contain/cover into media slot + chrome overlay
 - [x] `src/render/x/renderXPost.ts` — layout → chrome PNG → encode (single-pass
   when max bitrate binds; two-pass when size budget binds) +
-      source audio + bitrate budget + optional 720-wide downscale
+      source audio + bitrate budget (canvas already 720-wide)
 - [x] Unit tests for filtergraph + renderXPost (mocked screenshot/ffmpeg)
 - [ ] Integration: real chromium + ffmpeg fixture (optional / later)
 
@@ -508,9 +508,9 @@ Resolve during the phase, not in another grill:
    and emoji quality on one sample Spanish tweet with ⚽🏆.
 2. **yt-dlp quote fidelity (1):** if dump-json lacks quote trees, add
    `--write-pages` extractor or narrow v1 to “simple + best-effort quote.”
-3. **Width constant:** 1080 vs 720 — 720 faster/smaller; 1080 sharper in Telegram.
-4. **Tall video max height:** clamp so `video_quotes` cards do not exceed a
-   practical max (e.g. 1920 or 2400) before encode.
+3. **Width constant:** 720 — WhatsApp HD video is 720p and always re-encodes; 1080 chrome text smears on forward. Type tokens stay 1080-scale (~42px).
+4. **Tall video max height:** clamp canvas to 1280 (WhatsApp HD long edge) by
+   shrinking the media slot.
 
 ---
 

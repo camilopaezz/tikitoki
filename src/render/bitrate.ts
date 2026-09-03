@@ -18,7 +18,7 @@ const QUALITY_FLOOR_BITS_PER_PIXEL_PER_FRAME = 0.08;
 const FPS = 30;
 // Size budget alone fills ~45 MB for short clips (e.g. 10s → ~36 Mbps).
 // Cap so we don't ship fat files that re-compress worse on WhatsApp/forwards.
-export const MAX_VIDEO_BITRATE = 4_000_000; // 4 Mbps — solid 1080p phone quality
+export const MAX_VIDEO_BITRATE = 4_000_000; // 4 Mbps — solid 720p phone quality
 
 export function computeBitrateBudget(
   targetSizeMb: number,
