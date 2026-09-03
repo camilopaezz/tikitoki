@@ -187,7 +187,8 @@ describe('layoutXPost', () => {
     expect(nested.mediaSlot.cornerRadius).toBe(80);
   });
 
-  it('clamps video_quotes with tall media to the WhatsApp HD long edge', () => {
+  it('shrinks tall video_quotes media; 10-line chrome may still exceed 1280', () => {
+    const unconstrained = computeMediaSlotSize(TEXT_COL_W, 720, 1280);
     const layout = layoutXPost(
       assets({
         layoutKind: 'video_quotes',
@@ -207,8 +208,9 @@ describe('layoutXPost', () => {
       }),
     );
     expect(layout.canvas.width).toBe(XRENDER_WIDTH);
-    expect(layout.canvas.height).toBeLessThanOrEqual(XRENDER_MAX_HEIGHT);
     expect(layout.canvas.height % 2).toBe(0);
+    // 10-line header + quote can exceed 1280 even with a tiny hole; encode scales later.
+    expect(layout.mediaSlot.h).toBeLessThan(unconstrained.h);
     expect(layout.mediaSlot.h).toBeGreaterThan(2);
   });
 });

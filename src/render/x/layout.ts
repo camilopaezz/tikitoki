@@ -189,7 +189,10 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
   const canvasH = even(height);
   if (canvasH > XRENDER_MAX_HEIGHT) {
     const overflow = canvasH - XRENDER_MAX_HEIGHT;
-    const newH = Math.max(2, evenFloor(mediaSlot.h - overflow));
+    // Don't crush the hole to 2px — 10-line chrome + quote can exceed 1280
+    // without any media; renderXPost then scales the composited frame.
+    const minMediaH = Math.max(2, even(mediaFitW * 0.4));
+    const newH = Math.max(minMediaH, evenFloor(mediaSlot.h - overflow));
     const aspect = mediaSlot.w / mediaSlot.h;
     const delta = mediaSlot.h - newH;
     mediaSlot.h = newH;

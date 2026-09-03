@@ -108,4 +108,35 @@ describe('renderXPost', () => {
     const bIdx = pass2.indexOf('-b:v');
     expect(Number(pass2[bIdx + 1])).toBeLessThan(4_000_000);
   });
+
+  it('scales the encode canvas when measured chrome is taller than 1280', async () => {
+    const screenshotFn = vi.fn().mockResolvedValue('/tmp/job/xchrome/chrome.png');
+    const measureFn = vi.fn().mockResolvedValue({
+      x: 176,
+      y: 120,
+      contentHeight: 1336,
+      greenW: 498,
+      greenH: 280,
+    });
+    const cropFn = vi.fn().mockResolvedValue(undefined);
+    const runFfmpegFn = vi.fn().mockResolvedValue({ stdout: '', stderr: '', code: 0 });
+
+    await renderXPost({
+      jobId: 'jx-tall',
+      assets,
+      jobDir: '/tmp/job',
+      targetSizeMb: 45,
+      screenshotFn,
+      measureFn,
+      cropFn,
+      runFfmpegFn,
+    });
+
+    expect(cropFn).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', 720, 1336, {
+      jobId: 'jx-tall',
+    });
+    const args = lastArgs(runFfmpegFn).join(' ');
+    expect(args).toContain('color=c=black:s=');
+    expect(args).toMatch(/color=c=black:s=\d+x1280/);
+  });
 });
