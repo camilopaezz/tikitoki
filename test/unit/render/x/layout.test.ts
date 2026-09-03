@@ -61,6 +61,23 @@ describe('layoutXPost', () => {
     expect(layout.sections.quoteTop).toBeUndefined();
   });
 
+  it('places media just below the name row when the caption is empty', () => {
+    const empty = layoutXPost(
+      assets({
+        outer: {
+          author: { name: 'A', handle: 'a', verified: false },
+          text: { text: '', displayText: '' },
+        },
+      }),
+    );
+    const withText = layoutXPost(assets());
+    // Text column: PAD_TOP + NAME_LINE + GAP_HEADER_MEDIA — not below the avatar.
+    expect(empty.sections.mediaTop).toBe(33 + 56 + 33);
+    expect(empty.sections.mediaTop).toBeLessThan(withText.sections.mediaTop);
+    expect(empty.sections.mediaTop).toBeLessThan(33 + 111 + 33);
+    expect(empty.canvas.height).toBeLessThan(withText.canvas.height);
+  });
+
   it('grows height when a quote card is present', () => {
     const simple = layoutXPost(assets());
     const withQuote = layoutXPost(

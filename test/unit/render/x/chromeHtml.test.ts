@@ -41,6 +41,34 @@ describe('buildChromeHtml', () => {
     expect(html).not.toMatch(/duration|mute|0:12|00:12/i);
   });
 
+  it('places media in the text column so an empty caption lets the video rise under the name', () => {
+    const html = buildChromeHtml(base, layoutXPost(base));
+    const body = html.slice(html.indexOf('<body>'));
+    expect(body).not.toMatch(/class="text"/);
+    // name-row has no nested divs — next sibling inside .main must be the hole,
+    // not a card-level sibling under the avatar.
+    expect(body).toMatch(
+      /<div class="name-row">(?:(?!<\/div>)[\s\S])*<\/div>\s*<div class="media-wrap">/,
+    );
+  });
+
+  it('keeps caption above media inside the text column when text is present', () => {
+    const assets: XPostAssets = {
+      ...base,
+      outer: {
+        ...base.outer,
+        text: { text: 'caption here', displayText: 'caption here' },
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    const body = html.slice(html.indexOf('<body>'));
+    const main = body.slice(body.indexOf('class="main"'));
+    expect(main.indexOf('class="text"')).toBeGreaterThan(-1);
+    expect(main.indexOf('class="text"')).toBeLessThan(main.indexOf('data-media-hole'));
+    expect(main.indexOf('class="name-row"')).toBeLessThan(main.indexOf('class="text"'));
+    expect(body).toMatch(/class="text"[\s\S]*?<\/p>\s*<div class="media-wrap">/);
+  });
+
   it('renders quote text card in flow (no absolute top)', () => {
     const assets: XPostAssets = {
       ...base,
@@ -57,8 +85,11 @@ describe('buildChromeHtml', () => {
     expect(html).toMatch(/class="quote"/);
     expect(html).not.toMatch(/class="quote quote-single"/);
     expect(html).not.toMatch(/class="quote"[^>]*top:/);
-    // Feed: quote aligns with text column (right of avatar), not full card width.
-    expect(html).toMatch(/class="quote"[^>]*margin-left:/);
+    // Feed: quote lives in the text column (.main), not a full-width card sibling.
+    const body = html.slice(html.indexOf('<body>'));
+    const main = body.slice(body.indexOf('class="main"'));
+    expect(main.indexOf('class="quote"')).toBeGreaterThan(-1);
+    expect(main.indexOf('data-media-hole')).toBeLessThan(main.indexOf('class="quote"'));
   });
 
   it('places single quote image left of body text with author above (feed)', () => {

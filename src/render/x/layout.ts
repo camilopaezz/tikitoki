@@ -132,7 +132,8 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
   const textH = hasOuterText ? TEXT_MAX_LINES * TEXT_LINE : 0;
   const nameBlockH = NAME_LINE + (textH > 0 ? TEXT_MARGIN_TOP + textH : 0);
   const headerH = Math.max(AVATAR, nameBlockH);
-  const afterHeader = even(PAD_TOP + headerH + GAP_HEADER_MEDIA);
+  // Media/quote live in the text column (below name/caption), not under the avatar.
+  const afterHeader = even(PAD_TOP + nameBlockH + GAP_HEADER_MEDIA);
   const media = computeMediaSlotSize(
     mediaFitW,
     assets.primaryVideo.width,
