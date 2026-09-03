@@ -3,10 +3,22 @@ import type { XPostAssets } from '../../../../src/fetch/downloadXAssets.js';
 import {
   computeMediaSlotSize,
   layoutXPost,
+  maxMediaHeight,
   X_LAYOUT_CONSTANTS,
   XRENDER_MAX_HEIGHT,
   XRENDER_WIDTH,
 } from '../../../../src/render/x/layout.js';
+
+function evenFloor(n: number): number {
+  const r = Math.floor(n);
+  return r % 2 === 0 ? r : r - 1;
+}
+
+const TEXT_COL_W = evenFloor(
+  XRENDER_WIDTH -
+    (X_LAYOUT_CONSTANTS.PAD_X + X_LAYOUT_CONSTANTS.AVATAR + X_LAYOUT_CONSTANTS.HEADER_GAP) -
+    X_LAYOUT_CONSTANTS.PAD_X,
+);
 
 function assets(over: Partial<XPostAssets> = {}): XPostAssets {
   return {
@@ -22,9 +34,6 @@ function assets(over: Partial<XPostAssets> = {}): XPostAssets {
   };
 }
 
-/** Production text column: evenFloor(720 - (44+111+22) - 44). */
-const TEXT_COL_W = 498;
-
 describe('computeMediaSlotSize', () => {
   it('uses contain for landscape and derives height from aspect', () => {
     const s = computeMediaSlotSize(TEXT_COL_W, 1280, 720);
@@ -37,9 +46,7 @@ describe('computeMediaSlotSize', () => {
   it('contains tall video: full frame, reduced width under feed max height', () => {
     const s = computeMediaSlotSize(TEXT_COL_W, 720, 1280);
     expect(s.fit).toBe('contain');
-    // Max box H = even(498 * 5/4) = 624; 9:16 → w = even(624 * 9/16) = 352.
-    expect(s.h).toBe(624);
-    expect(s.w).toBe(352);
+    expect(s.h).toBe(maxMediaHeight(TEXT_COL_W));
     expect(s.w).toBeLessThan(TEXT_COL_W);
     expect(s.w / s.h).toBeCloseTo(720 / 1280, 1);
   });
@@ -166,7 +173,6 @@ describe('layoutXPost', () => {
     const { QUOTE_PAD, QUOTE_BORDER, QUOTE_SINGLE_IMG, HEADER_GAP } = X_LAYOUT_CONSTANTS;
     const quoteInner = TEXT_COL_W - QUOTE_PAD * 2 - QUOTE_BORDER * 2;
     const captionW = quoteInner - QUOTE_SINGLE_IMG - HEADER_GAP;
-    // 42px Chirp needs more than a handful of glyphs/line under line-clamp:3.
     expect(captionW).toBeGreaterThanOrEqual(200);
   });
 
@@ -184,7 +190,7 @@ describe('layoutXPost', () => {
     );
     expect(nested.mediaSlot.x).toBeGreaterThan(outer.mediaSlot.x);
     expect(nested.mediaSlot.w).toBeLessThan(outer.mediaSlot.w);
-    expect(nested.mediaSlot.cornerRadius).toBe(80);
+    expect(nested.mediaSlot.cornerRadius).toBe(X_LAYOUT_CONSTANTS.MEDIA_RADIUS);
   });
 
   it('shrinks tall video_quotes media; 10-line chrome may still exceed 1280', () => {

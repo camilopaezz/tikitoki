@@ -508,7 +508,7 @@ Resolve during the phase, not in another grill:
    and emoji quality on one sample Spanish tweet with ⚽🏆.
 2. **yt-dlp quote fidelity (1):** if dump-json lacks quote trees, add
    `--write-pages` extractor or narrow v1 to “simple + best-effort quote.”
-3. **Width constant:** 720 — WhatsApp HD video is 720p and always re-encodes; 1080 chrome text smears on forward. Type tokens stay 1080-scale (~42px).
+3. **Width constant:** 720 — WhatsApp HD video is 720p and always re-encodes; 1080 chrome text smears on forward. Tokens scale from the 390 CSS-px feed.
 4. **Tall video max height:** clamp canvas to 1280 (WhatsApp HD long edge) by
    shrinking the media slot.
 
