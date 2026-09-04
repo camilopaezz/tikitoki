@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { XPostAssets } from '../../../../src/fetch/downloadXAssets.js';
 import { buildChromeHtml } from '../../../../src/render/x/chromeHtml.js';
-import { layoutXPost } from '../../../../src/render/x/layout.js';
+import { layoutXPost, X_LAYOUT_CONSTANTS } from '../../../../src/render/x/layout.js';
 
 const base: XPostAssets = {
   layoutKind: 'simple_video',
@@ -114,6 +114,29 @@ describe('buildChromeHtml', () => {
     const body = html.slice(html.indexOf('<body>'));
     expect(body.indexOf('quote-head')).toBeLessThan(body.indexOf('quote-body'));
     expect(body.indexOf('qimg-single')).toBeLessThan(body.indexOf('class="qtext"'));
+  });
+
+  it('sizes the single quote image to four text lines (X feed thumb)', () => {
+    const assets: XPostAssets = {
+      ...base,
+      layoutKind: 'video_quotes',
+      quote: {
+        author: { name: 'Dawn', handle: 'rhinestoneeye21', verified: false },
+        text: {
+          text: 'CHARLIE KIRK IS GONNA BE AT MY UNIVERSITY',
+          displayText: 'CHARLIE KIRK IS GONNA BE AT MY UNIVERSITY',
+        },
+        images: [{ path: '/tmp/q.jpg' }],
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    const fourLines = 4 * X_LAYOUT_CONSTANTS.LINE_HEIGHT;
+    expect(html).toMatch(
+      new RegExp(
+        `\\.qimg\\.qimg-single\\s*\\{[^}]*width:\\s*${fourLines}px;[^}]*height:\\s*${fourLines}px;`,
+        's',
+      ),
+    );
   });
 
   it('keeps multi-image quote as a grid under text', () => {

@@ -78,8 +78,6 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     QUOTE_IMG_GAP,
     BADGE,
   } = X_LAYOUT_CONSTANTS;
-  const textColIndent = AVATAR + HEADER_GAP;
-  const textColW = colW - textColIndent;
   const quoteImgCount = assets.quote?.images.length ?? 0;
   const singleQuoteImg = quoteImgCount === 1;
   const videoInsideQuote = assets.layoutKind === 'quote_of_video' && Boolean(assets.quote);
@@ -105,7 +103,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
         ? `<img class="qimg qimg-single" src="${esc(src)}" alt="" />`
         : `<div class="qimg qimg-single ph"></div>`;
       quoteBlock = `
-      <div class="quote quote-single" style="width:${textColW}px">
+      <div class="quote quote-single">
         ${head}
         <div class="quote-body">
           ${thumb}
@@ -125,7 +123,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
               .join('')
           : '';
       quoteBlock = `
-      <div class="quote" style="width:${textColW}px">
+      <div class="quote">
         ${head}
         ${body}
         ${imgs ? `<div class="qimgs">${imgs}</div>` : ''}
@@ -181,13 +179,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: ${FONT_SIZE}px; color: #71767a;
   }
-  .main {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-  }
+  .main { flex: 1; min-width: 0; }
   .name-row {
     display: flex;
     align-items: center;
@@ -234,9 +226,6 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     width: ${slot.w}px;
     height: ${slot.h}px;
     margin-top: ${GAP_HEADER_MEDIA}px;
-    margin-left: 0;
-    align-self: flex-start;
-    flex-shrink: 0;
   }
   .media-hole {
     position: absolute;
@@ -263,8 +252,6 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     padding: ${QUOTE_PAD}px;
     overflow: hidden;
     background: #000;
-    flex-shrink: 0;
-    align-self: flex-start;
   }
   .quote.quote-single {
     display: flex;
@@ -313,7 +300,6 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
   }
   .qimg.ph { background: #16181c; }
   .quote .media-wrap {
-    margin-left: 0;
     margin-top: ${QUOTE_INNER_GAP}px;
   }
 </style>

@@ -3,6 +3,7 @@ import type { XPostAssets } from '../../../../src/fetch/downloadXAssets.js';
 import {
   computeMediaSlotSize,
   layoutXPost,
+  X_LAYOUT_CONSTANTS,
   XRENDER_WIDTH,
 } from '../../../../src/render/x/layout.js';
 
@@ -72,9 +73,15 @@ describe('layoutXPost', () => {
     );
     const withText = layoutXPost(assets());
     // Text column: PAD_TOP + NAME_LINE + GAP_HEADER_MEDIA — not below the avatar.
-    expect(empty.sections.mediaTop).toBe(33 + 56 + 33);
+    expect(empty.sections.mediaTop).toBe(
+      X_LAYOUT_CONSTANTS.PAD_TOP +
+        X_LAYOUT_CONSTANTS.NAME_LINE +
+        X_LAYOUT_CONSTANTS.GAP_HEADER_MEDIA,
+    );
     expect(empty.sections.mediaTop).toBeLessThan(withText.sections.mediaTop);
-    expect(empty.sections.mediaTop).toBeLessThan(33 + 111 + 33);
+    expect(empty.sections.mediaTop).toBeLessThan(
+      X_LAYOUT_CONSTANTS.PAD_TOP + X_LAYOUT_CONSTANTS.AVATAR + X_LAYOUT_CONSTANTS.GAP_HEADER_MEDIA,
+    );
     expect(empty.canvas.height).toBeLessThan(withText.canvas.height);
   });
 
