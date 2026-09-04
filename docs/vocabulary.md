@@ -69,7 +69,10 @@ so searchability stays one-to-one.
   `min(target_size / duration − audio, max_video_bitrate)` where target is
   ~45 MB (under Telegram's 50 MB upload cap) and `max_video_bitrate` is a
   quality ceiling (~4 Mbps) so short clips stay small instead of filling the
-  size target (better for WhatsApp/forward re-encodes). Slideshows always run a
+  size target (better for WhatsApp/forward re-encodes). **xrender** canvas is
+  **720** wide and at most **1280** tall (WhatsApp HD video is 720p). Feed
+  tokens scale from the 390 CSS-px column so chrome is not a 1080-zoom crop.
+  Slideshows always run a
   **two-pass** H.264 encode. **xrender** uses preset `veryfast` with
   **single-pass VBV** when the max bitrate binds, and **two-pass** when the
   size budget binds.
