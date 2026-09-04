@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { XPostAssets } from '../../../../src/fetch/downloadXAssets.js';
 import { buildChromeHtml } from '../../../../src/render/x/chromeHtml.js';
-import { layoutXPost } from '../../../../src/render/x/layout.js';
+import { layoutXPost, X_LAYOUT_CONSTANTS } from '../../../../src/render/x/layout.js';
 
 const base: XPostAssets = {
   layoutKind: 'simple_video',
@@ -41,6 +41,34 @@ describe('buildChromeHtml', () => {
     expect(html).not.toMatch(/duration|mute|0:12|00:12/i);
   });
 
+  it('places media in the text column so an empty caption lets the video rise under the name', () => {
+    const html = buildChromeHtml(base, layoutXPost(base));
+    const body = html.slice(html.indexOf('<body>'));
+    expect(body).not.toMatch(/class="text"/);
+    // name-row has no nested divs — next sibling inside .main must be the hole,
+    // not a card-level sibling under the avatar.
+    expect(body).toMatch(
+      /<div class="name-row">(?:(?!<\/div>)[\s\S])*<\/div>\s*<div class="media-wrap">/,
+    );
+  });
+
+  it('keeps caption above media inside the text column when text is present', () => {
+    const assets: XPostAssets = {
+      ...base,
+      outer: {
+        ...base.outer,
+        text: { text: 'caption here', displayText: 'caption here' },
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    const body = html.slice(html.indexOf('<body>'));
+    const main = body.slice(body.indexOf('class="main"'));
+    expect(main.indexOf('class="text"')).toBeGreaterThan(-1);
+    expect(main.indexOf('class="text"')).toBeLessThan(main.indexOf('data-media-hole'));
+    expect(main.indexOf('class="name-row"')).toBeLessThan(main.indexOf('class="text"'));
+    expect(body).toMatch(/class="text"[\s\S]*?<\/p>\s*<div class="media-wrap">/);
+  });
+
   it('renders quote text card in flow (no absolute top)', () => {
     const assets: XPostAssets = {
       ...base,
@@ -57,8 +85,11 @@ describe('buildChromeHtml', () => {
     expect(html).toMatch(/class="quote"/);
     expect(html).not.toMatch(/class="quote quote-single"/);
     expect(html).not.toMatch(/class="quote"[^>]*top:/);
-    // Feed: quote aligns with text column (right of avatar), not full card width.
-    expect(html).toMatch(/class="quote"[^>]*margin-left:/);
+    // Feed: quote lives in the text column (.main), not a full-width card sibling.
+    const body = html.slice(html.indexOf('<body>'));
+    const main = body.slice(body.indexOf('class="main"'));
+    expect(main.indexOf('class="quote"')).toBeGreaterThan(-1);
+    expect(main.indexOf('data-media-hole')).toBeLessThan(main.indexOf('class="quote"'));
   });
 
   it('places single quote image left of body text with author above (feed)', () => {
@@ -83,6 +114,29 @@ describe('buildChromeHtml', () => {
     const body = html.slice(html.indexOf('<body>'));
     expect(body.indexOf('quote-head')).toBeLessThan(body.indexOf('quote-body'));
     expect(body.indexOf('qimg-single')).toBeLessThan(body.indexOf('class="qtext"'));
+  });
+
+  it('sizes the single quote image to four text lines (X feed thumb)', () => {
+    const assets: XPostAssets = {
+      ...base,
+      layoutKind: 'video_quotes',
+      quote: {
+        author: { name: 'Dawn', handle: 'rhinestoneeye21', verified: false },
+        text: {
+          text: 'CHARLIE KIRK IS GONNA BE AT MY UNIVERSITY',
+          displayText: 'CHARLIE KIRK IS GONNA BE AT MY UNIVERSITY',
+        },
+        images: [{ path: '/tmp/q.jpg' }],
+      },
+    };
+    const html = buildChromeHtml(assets, layoutXPost(assets));
+    const fourLines = 4 * X_LAYOUT_CONSTANTS.LINE_HEIGHT;
+    expect(html).toMatch(
+      new RegExp(
+        `\\.qimg\\.qimg-single\\s*\\{[^}]*width:\\s*${fourLines}px;[^}]*height:\\s*${fourLines}px;`,
+        's',
+      ),
+    );
   });
 
   it('keeps multi-image quote as a grid under text', () => {

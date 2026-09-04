@@ -38,7 +38,8 @@ const QUOTE_INNER_GAP = 11; // 4 (gap-1)
 const QUOTE_RADIUS = 44; // 16
 const QUOTE_BORDER = 3;
 const BADGE = 42; // 15
-const QUOTE_SINGLE_IMG = 277; // ~100 @390
+/** X feed quote thumb is always 4 text lines (80 @390). */
+const QUOTE_SINGLE_IMG = 4 * LINE_HEIGHT;
 const QUOTE_IMG_GAP = 6; // 2 (gap-0.5)
 /**
  * Max media-box height as a multiple of content width. Tall videos are
@@ -132,7 +133,8 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
   const textH = hasOuterText ? TEXT_MAX_LINES * TEXT_LINE : 0;
   const nameBlockH = NAME_LINE + (textH > 0 ? TEXT_MARGIN_TOP + textH : 0);
   const headerH = Math.max(AVATAR, nameBlockH);
-  const afterHeader = even(PAD_TOP + headerH + GAP_HEADER_MEDIA);
+  // Media/quote live in the text column (below name/caption), not under the avatar.
+  const afterHeader = even(PAD_TOP + nameBlockH + GAP_HEADER_MEDIA);
   const media = computeMediaSlotSize(
     mediaFitW,
     assets.primaryVideo.width,

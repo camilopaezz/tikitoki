@@ -3,6 +3,7 @@ import type { XPostAssets } from '../../../../src/fetch/downloadXAssets.js';
 import {
   computeMediaSlotSize,
   layoutXPost,
+  X_LAYOUT_CONSTANTS,
   XRENDER_WIDTH,
 } from '../../../../src/render/x/layout.js';
 
@@ -59,6 +60,29 @@ describe('layoutXPost', () => {
       XRENDER_WIDTH,
     );
     expect(layout.sections.quoteTop).toBeUndefined();
+  });
+
+  it('places media just below the name row when the caption is empty', () => {
+    const empty = layoutXPost(
+      assets({
+        outer: {
+          author: { name: 'A', handle: 'a', verified: false },
+          text: { text: '', displayText: '' },
+        },
+      }),
+    );
+    const withText = layoutXPost(assets());
+    // Text column: PAD_TOP + NAME_LINE + GAP_HEADER_MEDIA — not below the avatar.
+    expect(empty.sections.mediaTop).toBe(
+      X_LAYOUT_CONSTANTS.PAD_TOP +
+        X_LAYOUT_CONSTANTS.NAME_LINE +
+        X_LAYOUT_CONSTANTS.GAP_HEADER_MEDIA,
+    );
+    expect(empty.sections.mediaTop).toBeLessThan(withText.sections.mediaTop);
+    expect(empty.sections.mediaTop).toBeLessThan(
+      X_LAYOUT_CONSTANTS.PAD_TOP + X_LAYOUT_CONSTANTS.AVATAR + X_LAYOUT_CONSTANTS.GAP_HEADER_MEDIA,
+    );
+    expect(empty.canvas.height).toBeLessThan(withText.canvas.height);
   });
 
   it('grows height when a quote card is present', () => {

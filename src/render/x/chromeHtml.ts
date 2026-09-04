@@ -41,8 +41,9 @@ function mediaHoleHtml(slot: XPostLayout['mediaSlot']): string {
 /**
  * Build feed-card chrome as **document flow** (not absolute Y for the hole).
  *
- * Chromium wraps caption text for real; the green media hole sits after the
- * header in normal flow (or inside the quote card for `quote_of_video`).
+ * Chromium wraps caption text for real; the green media hole sits in the
+ * text column after the name/caption (or inside the quote card for
+ * `quote_of_video`) so an empty caption lets the video rise under the name.
  * `renderXPost` measures the hole from the PNG so ffmpeg overlay Y matches.
  */
 export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): string {
@@ -77,8 +78,6 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     QUOTE_IMG_GAP,
     BADGE,
   } = X_LAYOUT_CONSTANTS;
-  const textColIndent = AVATAR + HEADER_GAP;
-  const textColW = colW - textColIndent;
   const quoteImgCount = assets.quote?.images.length ?? 0;
   const singleQuoteImg = quoteImgCount === 1;
   const videoInsideQuote = assets.layoutKind === 'quote_of_video' && Boolean(assets.quote);
@@ -104,7 +103,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
         ? `<img class="qimg qimg-single" src="${esc(src)}" alt="" />`
         : `<div class="qimg qimg-single ph"></div>`;
       quoteBlock = `
-      <div class="quote quote-single" style="width:${textColW}px;margin-left:${textColIndent}px">
+      <div class="quote quote-single">
         ${head}
         <div class="quote-body">
           ${thumb}
@@ -124,7 +123,7 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
               .join('')
           : '';
       quoteBlock = `
-      <div class="quote" style="width:${textColW}px;margin-left:${textColIndent}px">
+      <div class="quote">
         ${head}
         ${body}
         ${imgs ? `<div class="qimgs">${imgs}</div>` : ''}
@@ -227,9 +226,6 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     width: ${slot.w}px;
     height: ${slot.h}px;
     margin-top: ${GAP_HEADER_MEDIA}px;
-    margin-left: ${textColIndent}px;
-    align-self: flex-start;
-    flex-shrink: 0;
   }
   .media-hole {
     position: absolute;
@@ -256,8 +252,6 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
     padding: ${QUOTE_PAD}px;
     overflow: hidden;
     background: #000;
-    flex-shrink: 0;
-    align-self: flex-start;
   }
   .quote.quote-single {
     display: flex;
@@ -306,7 +300,6 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
   }
   .qimg.ph { background: #16181c; }
   .quote .media-wrap {
-    margin-left: 0;
     margin-top: ${QUOTE_INNER_GAP}px;
   }
 </style>
@@ -322,10 +315,10 @@ export function buildChromeHtml(assets: XPostAssets, layout: XPostLayout): strin
           <span class="handle">@${esc(assets.outer.author.handle)}</span>
         </div>
         ${outerText ? `<p class="text">${esc(outerText)}</p>` : ''}
+        ${outerHole}
+        ${quoteBlock}
       </div>
     </div>
-    ${outerHole}
-    ${quoteBlock}
   </article>
 </body>
 </html>`;
