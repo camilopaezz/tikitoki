@@ -16,17 +16,28 @@ export interface ScreenshotChromeOptions {
   chromiumBin?: string;
 }
 
-const CANDIDATE_BINS = ['chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable'];
+const CANDIDATE_BINS = [
+  'chromium-headless-shell',
+  'chrome-headless-shell',
+  'chromium',
+  'chromium-browser',
+  'google-chrome',
+  'google-chrome-stable',
+];
 
 /** Chromium `--timeout` is milliseconds (hard cap inside the browser). */
 export const CHROME_TIMEOUT_MS = 15_000;
 /** Fast-forward local HTML paint, then screenshot. Milliseconds. */
 export const CHROME_VIRTUAL_TIME_MS = 5_000;
 /**
- * Node-side kill if Chromium ignores `--timeout` (`--headless=new` can hang
+ * Node-side kill if Chromium ignores `--timeout` (full `--headless=new` can hang
  * forever on WebUI / on-device-model services). Slightly above the Chromium cap.
  */
 export const CHROME_PROCESS_TIMEOUT_MS = 20_000;
+
+function isHeadlessShell(bin: string): boolean {
+  return bin.includes('headless-shell');
+}
 
 async function pngExists(pngPath: string): Promise<boolean> {
   try {
@@ -48,7 +59,7 @@ async function resolveChromium(explicit?: string): Promise<string> {
     }
   }
   throw new Error(
-    'No Chromium/Chrome binary found for xrender chrome screenshot (install chromium)',
+    'No Chromium/Chrome binary found for xrender chrome screenshot (install chromium-headless-shell or chromium)',
   );
 }
 
@@ -78,10 +89,12 @@ export async function screenshotChrome(opts: ScreenshotChromeOptions): Promise<s
   log.debug(`Screenshot chrome with ${bin} ${opts.width}x${opts.height}`);
 
   // window-size must fit the card; --screenshot writes viewport capture.
-  // `--headless=new` can idle forever (WebUI / OnDeviceModel). Cap both inside
-  // Chromium and in Node, and isolate the profile so jobs cannot share it.
+  // Full `--headless=new` can idle forever (WebUI / OnDeviceModel). Cap both
+  // inside Chromium and in Node, and isolate the profile so jobs cannot share it.
+  // chrome-headless-shell is already old-headless; --headless=new would be the
+  // full browser. SwiftShader replaces the Mesa/LLVM GPU stack we strip in Docker.
   const chromeArgs = [
-    '--headless=new',
+    ...(isHeadlessShell(bin) ? ['--headless', '--enable-unsafe-swiftshader'] : ['--headless=new']),
     '--disable-gpu',
     '--no-sandbox',
     '--hide-scrollbars',

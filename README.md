@@ -41,7 +41,7 @@ Run your own instance with Docker Compose.
 - Docker + Docker Compose
 - A bot token from [@BotFather](https://t.me/botfather)
 - Optional: Netscape-format cookies for better access to restricted posts
-- Chromium is included in the image (needed for X feed-card render)
+- Headless Chromium is included in the image (needed for X feed-card render)
 
 ### Quick start
 
