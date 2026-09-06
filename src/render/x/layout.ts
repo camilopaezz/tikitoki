@@ -2,51 +2,19 @@ import type { XPostAssets } from '../../fetch/downloadXAssets.js';
 import { truncateTweetText } from '../../fetch/truncateTweetText.js';
 import type { XMediaFit, XPostLayout } from './types.js';
 
-/** Fixed feed column width (even). */
-export const XRENDER_WIDTH = 1080;
+/**
+ * Fixed feed column width (even).
+ * 720 so WhatsApp HD (720p video, always re-encoded) does not downscale
+ * the chrome. Tokens scale from the 390 CSS-px live feed so the card is a
+ * feed column, not a 1080-zoom crop on a 720 canvas.
+ */
+export const XRENDER_WIDTH = 720;
 
-/**
- * 390 CSS-px feed tokens × 1080/390 ≈ 2.769, measured 2026-08-27 on live x.com.
- * Spacing tokens must match chromeHtml.ts document-flow styles.
- * Vertical media Y is NOT trusted from this module — Chromium lays out text,
- * then measureChromePng() reads the green hole. These numbers only size the
- * media slot and provide a tall-enough screenshot window upper bound.
- */
-const PAD_X = 44; // 16
-const PAD_TOP = 33; // 12
-const PAD_BOTTOM = 44; // 16
-const AVATAR = 111; // 40
-const HEADER_GAP = 22; // 8
-const FONT_SIZE = 42; // 15
-const LINE_HEIGHT = 56; // 20
-const NAME_LINE = LINE_HEIGHT;
-const TEXT_LINE = LINE_HEIGHT;
-/** Outer caption budget. Quote cards stay at 3 / 140 in chromeHtml.ts. */
-const TEXT_MAX_LINES = 10;
-const OUTER_TEXT_MAX_CHARS = 280;
-const TEXT_MARGIN_TOP = 6; // 2 (gap-0.5)
-const NAME_ROW_GAP = 11; // 4 (gap-1)
-const GAP_HEADER_MEDIA = 33; // 12 (gap-3)
-const GAP_MEDIA_QUOTE = 33; // 12
-const MEDIA_RADIUS = 80; // 28.8 rounded-md
-const MEDIA_BORDER = 3; // 1px hairline
-const QUOTE_PAD = 33; // 12 (p-3)
-const QUOTE_AVATAR = 66; // 24
-const QUOTE_NAME_LINE = LINE_HEIGHT;
-const QUOTE_TEXT_LINE = LINE_HEIGHT;
-const QUOTE_INNER_GAP = 11; // 4 (gap-1)
-const QUOTE_RADIUS = 44; // 16
-const QUOTE_BORDER = 3;
-const BADGE = 42; // 15
-/** X feed quote thumb is always 4 text lines (80 @390). */
-const QUOTE_SINGLE_IMG = 4 * LINE_HEIGHT;
-const QUOTE_IMG_GAP = 6; // 2 (gap-0.5)
-/**
- * Max media-box height as a multiple of content width. Tall videos are
- * **contained** into this box (full frame visible) — width shrinks so aspect
- * is preserved, matching the X app feed (not full-column cover-crop).
- */
-const MAX_MEDIA_H_RATIO = 5 / 4; // height / width of the fit box
+/** WhatsApp HD long edge. Taller canvases still get downscaled on forward. */
+export const XRENDER_MAX_HEIGHT = 1280;
+
+/** Live x.com mobile feed column, measured 2026-08-27. */
+const FEED_CSS_W = 390;
 
 function even(n: number): number {
   const r = Math.round(n);
@@ -58,6 +26,46 @@ function evenFloor(n: number): number {
   const r = Math.floor(n);
   return r % 2 === 0 ? r : r - 1;
 }
+
+function tok(cssPx: number): number {
+  return even((cssPx * XRENDER_WIDTH) / FEED_CSS_W);
+}
+
+const PAD_X = tok(16);
+const PAD_TOP = tok(12);
+const PAD_BOTTOM = tok(16);
+const AVATAR = tok(40);
+const HEADER_GAP = tok(8);
+const FONT_SIZE = tok(15);
+const LINE_HEIGHT = tok(20);
+const NAME_LINE = LINE_HEIGHT;
+const TEXT_LINE = LINE_HEIGHT;
+/** Outer caption budget. Quote cards stay at 3 / 140 in chromeHtml.ts. */
+const TEXT_MAX_LINES = 10;
+const OUTER_TEXT_MAX_CHARS = 280;
+const TEXT_MARGIN_TOP = tok(2);
+const NAME_ROW_GAP = tok(4);
+const GAP_HEADER_MEDIA = tok(12);
+const GAP_MEDIA_QUOTE = tok(12);
+const MEDIA_RADIUS = tok(28.8);
+const MEDIA_BORDER = tok(1);
+const QUOTE_PAD = tok(12);
+const QUOTE_AVATAR = tok(24);
+const QUOTE_NAME_LINE = LINE_HEIGHT;
+const QUOTE_TEXT_LINE = LINE_HEIGHT;
+const QUOTE_INNER_GAP = tok(4);
+const QUOTE_RADIUS = tok(16);
+const QUOTE_BORDER = tok(1);
+const BADGE = tok(15);
+const QUOTE_IMG_GAP = tok(2);
+/** X feed quote thumb is always 4 text lines (80 @390). */
+const QUOTE_SINGLE_IMG = 4 * LINE_HEIGHT;
+/**
+ * Max media-box height as a multiple of content width. Tall videos are
+ * **contained** into this box (full frame visible) — width shrinks so aspect
+ * is preserved, matching the X app feed (not full-column cover-crop).
+ */
+const MAX_MEDIA_H_RATIO = 5 / 4; // height / width of the fit box
 
 /** Max media slot height for a given content width (even). */
 export function maxMediaHeight(contentInnerW: number): number {
@@ -174,6 +182,28 @@ export function layoutXPost(assets: XPostAssets): XPostLayout {
     } else {
       quoteTop = afterHeader + media.h + GAP_MEDIA_QUOTE;
       height = quoteTop + quoteH + PAD_BOTTOM;
+    }
+  }
+
+  const canvasH = even(height);
+  if (canvasH > XRENDER_MAX_HEIGHT) {
+    const overflow = canvasH - XRENDER_MAX_HEIGHT;
+    // Don't crush the hole to 2px — 10-line chrome + quote can exceed 1280
+    // without any media; renderXPost then scales the composited frame.
+    const minMediaH = Math.max(2, even(mediaFitW * 0.4));
+    const newH = Math.max(minMediaH, evenFloor(mediaSlot.h - overflow));
+    const aspect = mediaSlot.w / mediaSlot.h;
+    const delta = mediaSlot.h - newH;
+    mediaSlot.h = newH;
+    mediaSlot.w = Math.max(2, even(newH * aspect));
+    if (videoInsideQuote && quoteH !== undefined) {
+      quoteH = even(quoteH - delta);
+      height = (quoteTop ?? 0) + quoteH + PAD_BOTTOM;
+    } else if (quoteTop !== undefined) {
+      quoteTop -= delta;
+      height = quoteTop + (quoteH ?? 0) + PAD_BOTTOM;
+    } else {
+      height = afterHeader + newH + PAD_BOTTOM;
     }
   }
 

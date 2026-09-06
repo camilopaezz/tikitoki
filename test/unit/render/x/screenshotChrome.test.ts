@@ -32,7 +32,7 @@ import {
 const opts = {
   html: '<html></html>',
   jobDir: '/tmp/job',
-  width: 1080,
+  width: 720,
   height: 800,
   jobId: 'j1',
   chromiumBin: 'chromium',
@@ -70,7 +70,7 @@ describe('screenshotChrome', () => {
     expect(args).toContain(`--virtual-time-budget=${CHROME_VIRTUAL_TIME_MS}`);
     expect(args).toContain(`--timeout=${CHROME_TIMEOUT_MS}`);
     expect(args).toContain('--user-data-dir=/tmp/job/xchrome/user-data');
-    expect(args).toContain('--window-size=1080,800');
+    expect(args).toContain('--window-size=720,800');
     expect(args).toContain('--screenshot=/tmp/job/xchrome/chrome.png');
     expect(args).toContain('file:///tmp/job/xchrome/chrome.html');
     expect(chromeOpts.timeoutMs).toBe(CHROME_PROCESS_TIMEOUT_MS);

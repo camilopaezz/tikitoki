@@ -6,7 +6,7 @@ import { createStopwatch } from '../../util/stopwatch.js';
 import { computeBitrateBudget } from '../bitrate.js';
 import { buildChromeHtml } from './chromeHtml.js';
 import { buildXOverlayFiltergraph } from './filtergraph.js';
-import { layoutXPost } from './layout.js';
+import { layoutXPost, XRENDER_MAX_HEIGHT } from './layout.js';
 import { cropChromePng, measureChromePng } from './measureChrome.js';
 import { screenshotChrome } from './screenshotChrome.js';
 import type { XPostLayout } from './types.js';
@@ -41,7 +41,10 @@ export interface RenderXPostResult {
  *
  * Encode: single-pass VBV when the 4 Mbps cap binds (short clips — size has
  * headroom). Two-pass when the Telegram size budget binds (long clips) so
- * average bitrate stays honest.
+ * average bitrate stays honest. Canvas is 720-wide (WhatsApp HD). If the
+ * measured card is still taller than 1280 (10-line chrome + quote), scale
+ * the composited frame so the long edge fits; there is no bitrate-driven
+ * downscale.
  */
 export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPostResult> {
   const log = createLogger({ jobId: opts.jobId });
@@ -81,23 +84,26 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
   await cropFn(chromePath, layout.canvas.width, layout.canvas.height, { jobId: opts.jobId });
   sw.lap('crop');
 
-  const duration = opts.assets.primaryVideo.durationSec;
-  let canvas = layout.canvas;
-  let budget = computeBitrateBudget(opts.targetSizeMb ?? 45, duration, canvas.width, canvas.height);
-
-  let filterLayout = layout;
-  if (budget.needsDownscale) {
-    const w = Math.round(720 / 2) * 2;
-    const h = Math.round((canvas.height * (720 / canvas.width)) / 2) * 2;
-    log.info(`xrender budget low; downscaling canvas to ${w}x${h}`);
-    filterLayout = scaleLayout(layout, w / canvas.width);
-    canvas = filterLayout.canvas;
-    budget = computeBitrateBudget(opts.targetSizeMb ?? 45, duration, w, h);
+  if (layout.canvas.height > XRENDER_MAX_HEIGHT) {
+    const factor = XRENDER_MAX_HEIGHT / layout.canvas.height;
+    log.info(
+      `xrender canvas ${layout.canvas.width}x${layout.canvas.height} exceeds WhatsApp HD long edge; scaling to height ${XRENDER_MAX_HEIGHT}`,
+    );
+    layout = scaleLayout(layout, factor);
   }
+
+  const duration = opts.assets.primaryVideo.durationSec;
+  const canvas = layout.canvas;
+  const budget = computeBitrateBudget(
+    opts.targetSizeMb ?? 45,
+    duration,
+    canvas.width,
+    canvas.height,
+  );
   sw.lap('budget');
 
   const filterComplex = buildXOverlayFiltergraph({
-    layout: filterLayout,
+    layout,
     videoWidth: opts.assets.primaryVideo.width,
     videoHeight: opts.assets.primaryVideo.height,
     durationSec: duration,
@@ -244,15 +250,23 @@ function applyMeasuredChrome(
   };
 }
 
+/** Uniform scale after screenshot so WhatsApp HD (long edge 1280) does not downscale. */
 function scaleLayout(layout: XPostLayout, factor: number): XPostLayout {
   const even = (n: number) => {
     const r = Math.round(n);
     return r % 2 === 0 ? r : r + 1;
   };
+  const evenDown = (n: number) => {
+    const r = Math.round(n);
+    return r % 2 === 0 ? r : r - 1;
+  };
   const s = (n: number) => even(n * factor);
   return {
     ...layout,
-    canvas: { width: s(layout.canvas.width), height: s(layout.canvas.height) },
+    canvas: {
+      width: s(layout.canvas.width),
+      height: evenDown(layout.canvas.height * factor),
+    },
     contentWidth: s(layout.contentWidth),
     padX: s(layout.padX),
     mediaSlot: {
