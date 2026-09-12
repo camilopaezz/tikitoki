@@ -1,6 +1,6 @@
 # tikitoki
 
-**Paste a TikTok, Instagram, or X link in Telegram — tap Download — get a clean MP4 back.**
+**Paste a TikTok, Instagram, or X link in Telegram — tap Download — get the media back.**
 
 No watermarks to hunt for, no “open in browser” detours. Send the bot a post URL, confirm with the button, and it downloads or renders the media so you can save it, forward it, or share it elsewhere.
 
@@ -11,19 +11,22 @@ No watermarks to hunt for, no “open in browser” detours. Send the bot a post
 | Platform | What you can do |
 |----------|------------------|
 | **TikTok** | Download videos · turn photo slideshows into MP4s |
-| **Instagram** | Download reels · turn photo carousels into MP4 slideshows |
+| **Instagram** | Download photos or reels · **or** render a photo slideshow as MP4 |
 | **X (Twitter)** | Download the video **or** render a dark feed-card clip of the post |
 
-Paste a link, then tap **Download video**. The job starts on that tap — if you're on cooldown, the bot tells you how long to wait and the button stays so you don't have to paste the URL again.
+Paste a link, then tap a confirm button. The job starts on that tap — if you're on cooldown, the bot tells you how long to wait and the button stays so you don't have to paste the URL again.
 
 ### TikTok
 - **Videos** — full post video as an MP4
 - **Photo slideshows** — stitched into one video with even timing and a short crossfade
 
 ### Instagram
-- **Reels** — downloaded as MP4
-- **Photo carousels** — rendered as an MP4 slideshow (same idea as TikTok slides)
-- Mixed photo+video carousels and single images are not supported (the bot tells you clearly)
+Paste an Instagram link and pick what you want (no commands):
+
+- **Download images** — photos as-is (one photo, or an album). Video reels still come back as MP4.
+- **Render slideshow** — photos stitched into one MP4 with music when the post has it (same idea as TikTok slides), including a single image.
+
+Mixed photo+video carousels are not supported (the bot tells you clearly).
 
 ### X / Twitter
 Paste an X link and pick what you want (no commands):
@@ -138,7 +141,6 @@ Needs Node 20+, `ffmpeg`, `yt-dlp`, and Chromium/Chrome for X feed-card renders.
 |-----------------|-------------|
 | “Couldn’t fetch that post right now” | Auth challenge — refresh platform cookies and restart |
 | Mixed photos + videos (Instagram) | Use a photo-only carousel or a reel |
-| Single images not supported | Send a carousel or reel instead |
 | Video too large | Source is over `TARGET_SIZE_MB`; try another share/quality |
 | Long slideshows look 720p | Automatic downscale to stay under size limits — expected |
 | X render stuck on “Rendering” | Headless Chromium hung — bot now times out (~20s) and kills it. Needs `init: true` and `shm_size: "1gb"` in compose |

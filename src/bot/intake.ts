@@ -1,7 +1,7 @@
-import { isTwitterUrl } from '../util/postHost.js';
+import { isInstagramUrl, isTwitterUrl } from '../util/postHost.js';
 import type { ChoiceAction } from './pendingChoice.js';
 
-export { isTwitterUrl };
+export { isInstagramUrl, isTwitterUrl };
 
 export interface ParsedIntake {
   /** Absent when the message is not a usable job request. */
@@ -27,7 +27,7 @@ export function extractPostUrl(text: string): string | undefined {
 
 /**
  * Parse a user message into an optional post URL.
- * Mode (download vs feed-card render) is confirmed via inline buttons.
+ * Mode (download vs slideshow vs feed-card render) is confirmed via inline buttons.
  */
 export function parseIntake(text: string): ParsedIntake {
   const url = extractPostUrl(text.trim());
@@ -45,6 +45,15 @@ export function choiceForUrl(url: string): ChoicePrompt {
       ],
     };
   }
+  if (isInstagramUrl(url)) {
+    return {
+      message: IG_CHOICE_MESSAGE,
+      buttons: [
+        { action: 'dl', label: 'Download images' },
+        { action: 'ss', label: 'Render slideshow' },
+      ],
+    };
+  }
   return {
     message: VIDEO_CHOICE_MESSAGE,
     buttons: [{ action: 'dl', label: 'Download video' }],
@@ -52,15 +61,18 @@ export function choiceForUrl(url: string): ChoicePrompt {
 }
 
 export function isChoicePromptMessage(text: string | undefined): boolean {
-  return text === VIDEO_CHOICE_MESSAGE || text === X_CHOICE_MESSAGE;
+  return text === VIDEO_CHOICE_MESSAGE || text === X_CHOICE_MESSAGE || text === IG_CHOICE_MESSAGE;
 }
 
 export const USAGE_MESSAGE =
-  'Send me a TikTok, Instagram, or Twitter/X link, then tap Download. For X posts you can also render a feed card.';
+  'Send me a TikTok, Instagram, or Twitter/X link, then tap Download. For Instagram you can download images or render a slideshow. For X posts you can also render a feed card.';
 
 export const VIDEO_CHOICE_MESSAGE = 'Download this video?';
 
 export const X_CHOICE_MESSAGE = 'X post detected. Download the video, or render a feed card?';
+
+export const IG_CHOICE_MESSAGE =
+  'Instagram post detected. Download the images, or render a slideshow?';
 
 export const CHOICE_EXPIRED_MESSAGE = 'That button expired. Send the link again.';
 

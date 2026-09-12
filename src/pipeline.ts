@@ -28,43 +28,54 @@ export interface PipelineOptions {
 
 type Fetched =
   | { kind: 'video'; outputPath: string }
+  | { kind: 'image'; outputPath: string; images: string[] }
   | { kind: 'slideshow'; assets: SlideshowAssets };
 
 async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise<Fetched> {
   const resolved = await resolveInstagramUrl(job.url, job.jobId);
 
-  if (resolved.isReel) {
-    const outputPath = await downloadVideo({
-      url: resolved.url,
-      outDir: jobDir,
-      cookiesPath: config.instagramCookiesPath,
-      maxSizeMb: config.targetSizeMb,
-      jobId: job.jobId,
-      platform: 'instagram',
-    });
-    return { kind: 'video', outputPath };
+  if (!resolved.isReel && !resolved.isCarousel) {
+    throw new Error(`Unsupported Instagram URL (not a reel or carousel): ${resolved.url}`);
   }
 
-  if (resolved.isCarousel) {
-    const pagesDir = join(jobDir, 'pages');
-    await mkdir(pagesDir, { recursive: true });
-    const { entries } = await dumpInstagramCarousel({
-      url: resolved.url,
-      cookiesPath: config.instagramCookiesPath,
-      pagesDir,
-      jobId: job.jobId,
-    });
-    const music = extractMusicFromDir(pagesDir);
+  const pagesDir = join(jobDir, 'pages');
+  await mkdir(pagesDir, { recursive: true });
+  const { entries } = await dumpInstagramCarousel({
+    url: resolved.url,
+    cookiesPath: config.instagramCookiesPath,
+    pagesDir,
+    jobId: job.jobId,
+  });
+
+  if (entries.length >= 1) {
+    if (job.mode === 'slideshow') {
+      const music = extractMusicFromDir(pagesDir);
+      const assets = await downloadInstagramCarousel({
+        entries,
+        music,
+        outDir: jobDir,
+        jobId: job.jobId,
+      });
+      return { kind: 'slideshow', assets };
+    }
     const assets = await downloadInstagramCarousel({
       entries,
-      music,
+      music: {},
       outDir: jobDir,
       jobId: job.jobId,
     });
-    return { kind: 'slideshow', assets };
+    return { kind: 'image', outputPath: assets.images[0], images: assets.images };
   }
 
-  throw new Error(`Unsupported Instagram URL (not a reel or carousel): ${resolved.url}`);
+  const outputPath = await downloadVideo({
+    url: resolved.url,
+    outDir: jobDir,
+    cookiesPath: config.instagramCookiesPath,
+    maxSizeMb: config.targetSizeMb,
+    jobId: job.jobId,
+    platform: 'instagram',
+  });
+  return { kind: 'video', outputPath };
 }
 
 async function fetchTwitter(job: Job, jobDir: string, config: Config): Promise<Fetched> {
@@ -191,16 +202,22 @@ export function createPipeline(options: PipelineOptions) {
       return runXRender(job, jobDir, config, onStage, log);
     }
 
+    if (job.mode === 'slideshow' && !isInstagramUrl(job.url)) {
+      throw new Error('Slideshow render only works with Instagram links.');
+    }
+
     const fetched = isInstagramUrl(job.url)
       ? await fetchInstagram(job, jobDir, config)
       : isTwitterUrl(job.url)
         ? await fetchTwitter(job, jobDir, config)
         : await fetchTikTok(job, jobDir, config, log);
 
-    if (fetched.kind === 'video') {
-      // Video posts bypass the Rendering stage.
+    if (fetched.kind === 'video' || fetched.kind === 'image') {
+      // Video and image downloads bypass the Rendering stage.
       await onStage('Uploading');
-      return { outputPath: fetched.outputPath };
+      return fetched.kind === 'image'
+        ? { outputPath: fetched.outputPath, kind: 'image', images: fetched.images }
+        : { outputPath: fetched.outputPath, kind: 'video' };
     }
 
     await onStage('Rendering');
