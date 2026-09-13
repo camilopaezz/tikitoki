@@ -34,6 +34,14 @@ export function parseIntake(text: string): ParsedIntake {
   return { url };
 }
 
+function isInstagramPhotoPostUrl(url: string): boolean {
+  try {
+    return new URL(url).pathname.includes('/p/');
+  } catch {
+    return false;
+  }
+}
+
 /** Prompt + buttons shown after a URL paste; the job starts on button press. */
 export function choiceForUrl(url: string): ChoicePrompt {
   if (isTwitterUrl(url)) {
@@ -45,7 +53,8 @@ export function choiceForUrl(url: string): ChoicePrompt {
       ],
     };
   }
-  if (isInstagramUrl(url)) {
+  // Only /p/ posts are photos/carousels. Reels stay on the video download button.
+  if (isInstagramUrl(url) && isInstagramPhotoPostUrl(url)) {
     return {
       message: IG_CHOICE_MESSAGE,
       buttons: [
@@ -65,7 +74,7 @@ export function isChoicePromptMessage(text: string | undefined): boolean {
 }
 
 export const USAGE_MESSAGE =
-  'Send me a TikTok, Instagram, or Twitter/X link, then tap Download. For Instagram you can download images or render a slideshow. For X posts you can also render a feed card.';
+  'Send me a TikTok, Instagram, or Twitter/X link, then tap Download. For Instagram /p/ posts you can download images or render a slideshow. For X posts you can also render a feed card.';
 
 export const VIDEO_CHOICE_MESSAGE = 'Download this video?';
 

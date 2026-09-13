@@ -260,7 +260,6 @@ describe('createPipeline', () => {
       isCarousel: false,
       isReel: true,
     });
-    dumpInstagramCarousel.mockResolvedValue({ entries: [] });
     downloadVideo.mockResolvedValue('/tmp/ig-reel.mp4');
 
     const stages: string[] = [];
@@ -275,12 +274,7 @@ describe('createPipeline', () => {
     expect(result).toEqual({ outputPath: '/tmp/ig-reel.mp4', kind: 'video' });
 
     expect(resolveInstagramUrl).toHaveBeenCalledWith(job.url, job.jobId);
-    expect(dumpInstagramCarousel).toHaveBeenCalledWith({
-      url: 'https://www.instagram.com/reel/DYXQG03PTPI/',
-      cookiesPath: '/data/ig-cookies.txt',
-      pagesDir: expect.any(String),
-      jobId: job.jobId,
-    });
+    expect(dumpInstagramCarousel).not.toHaveBeenCalled();
     expect(downloadVideo).toHaveBeenCalledWith({
       url: 'https://www.instagram.com/reel/DYXQG03PTPI/',
       outDir: expect.any(String),
@@ -451,10 +445,10 @@ describe('createPipeline', () => {
     expect(renderSlideshow).not.toHaveBeenCalled();
   });
 
-  it('downloads a photo reel as an image and skips downloadVideo', async () => {
+  it('keeps Instagram reels on downloadVideo even when a dump would return cover images', async () => {
     const job = {
       ...baseJob(),
-      jobId: 'pipe-test-ig-photo-reel',
+      jobId: 'pipe-test-ig-reel-not-photo',
       url: 'https://www.instagram.com/reel/PHOTO/',
     };
     resolveInstagramUrl.mockResolvedValue({
@@ -465,14 +459,12 @@ describe('createPipeline', () => {
     dumpInstagramCarousel.mockResolvedValue({
       entries: [
         {
-          id: 'reel-photo',
+          id: 'reel-cover',
           thumbnails: [{ url: 'http://cdn/reel.jpg', width: 1080, height: 1920 }],
         },
       ],
     });
-    downloadInstagramCarousel.mockResolvedValue({
-      images: ['/tmp/ig/images/slide_000.jpg'],
-    });
+    downloadVideo.mockResolvedValue('/tmp/ig-reel.mp4');
 
     const stages: string[] = [];
     const onStage = vi.fn(async (stage: string) => {
@@ -483,12 +475,10 @@ describe('createPipeline', () => {
     const result = await runPipeline(job, onStage);
 
     expect(stages).toEqual(['Fetching', 'Uploading']);
-    expect(result).toEqual({
-      outputPath: '/tmp/ig/images/slide_000.jpg',
-      kind: 'image',
-      images: ['/tmp/ig/images/slide_000.jpg'],
-    });
-    expect(downloadVideo).not.toHaveBeenCalled();
+    expect(result).toEqual({ outputPath: '/tmp/ig-reel.mp4', kind: 'video' });
+    expect(dumpInstagramCarousel).not.toHaveBeenCalled();
+    expect(downloadInstagramCarousel).not.toHaveBeenCalled();
+    expect(downloadVideo).toHaveBeenCalled();
     expect(renderSlideshow).not.toHaveBeenCalled();
   });
 

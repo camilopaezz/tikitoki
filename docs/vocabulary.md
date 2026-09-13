@@ -33,18 +33,16 @@ so searchability stays one-to-one.
 
 ## Instagram domain
 
-- **Instagram reel** — a `/reel/` or `/reels/` URL. Usually a video we
-  handle via *passthrough*; may instead be a *photo reel*.
-- **Photo reel** — an Instagram reel that is a still image
-  (`image_versions2`, no `video_versions`). Instagram does not ship a video
-  file for these. *Image passthrough* or *slideshow* render, same as a
-  single-image post.
+- **Instagram reel** — a `/reel/` or `/reels/` URL. Always *video
+  passthrough* (`downloadVideo`). Cover stills in page dumps are ignored so
+  reels are not misclassified as photos.
 - **Instagram carousel** — a `/p/` post with two or more photos. *Image
   passthrough* sends them as a Telegram album; *slideshow* mode renders an
   MP4, same as a TikTok slideshow post.
 - **Single-image post** — a `/p/` post with one photo (top-level
   `image_versions2`, no `carousel_media`). *Image passthrough* or *slideshow*
-  render, chosen by the confirm button.
+  render, chosen by the confirm button. Only `/p/` URLs use the image dump
+  path.
 - **Image passthrough** — download the largest image candidate via HTTP
   (Instagram Referer) and send it as a photo or album. No ffmpeg.
 - **Mixed carousel** — photos and videos in one post. Still rejected

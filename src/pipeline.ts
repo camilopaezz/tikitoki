@@ -38,6 +38,20 @@ async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise
     throw new Error(`Unsupported Instagram URL (not a reel or carousel): ${resolved.url}`);
   }
 
+  // Reels are video-only. Cover thumbnails in page dumps look like photos and
+  // must not take the image/slideshow path — only /p/ posts do that.
+  if (resolved.isReel) {
+    const outputPath = await downloadVideo({
+      url: resolved.url,
+      outDir: jobDir,
+      cookiesPath: config.instagramCookiesPath,
+      maxSizeMb: config.targetSizeMb,
+      jobId: job.jobId,
+      platform: 'instagram',
+    });
+    return { kind: 'video', outputPath };
+  }
+
   const pagesDir = join(jobDir, 'pages');
   await mkdir(pagesDir, { recursive: true });
   const { entries } = await dumpInstagramCarousel({
@@ -47,35 +61,28 @@ async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise
     jobId: job.jobId,
   });
 
-  if (entries.length >= 1) {
-    if (job.mode === 'slideshow') {
-      const music = extractMusicFromDir(pagesDir);
-      const assets = await downloadInstagramCarousel({
-        entries,
-        music,
-        outDir: jobDir,
-        jobId: job.jobId,
-      });
-      return { kind: 'slideshow', assets };
-    }
+  if (entries.length === 0) {
+    throw new Error('Instagram post returned no downloadable images from page data');
+  }
+
+  if (job.mode === 'slideshow') {
+    const music = extractMusicFromDir(pagesDir);
     const assets = await downloadInstagramCarousel({
       entries,
-      music: {},
+      music,
       outDir: jobDir,
       jobId: job.jobId,
     });
-    return { kind: 'image', outputPath: assets.images[0], images: assets.images };
+    return { kind: 'slideshow', assets };
   }
 
-  const outputPath = await downloadVideo({
-    url: resolved.url,
+  const assets = await downloadInstagramCarousel({
+    entries,
+    music: {},
     outDir: jobDir,
-    cookiesPath: config.instagramCookiesPath,
-    maxSizeMb: config.targetSizeMb,
     jobId: job.jobId,
-    platform: 'instagram',
   });
-  return { kind: 'video', outputPath };
+  return { kind: 'image', outputPath: assets.images[0], images: assets.images };
 }
 
 async function fetchTwitter(job: Job, jobDir: string, config: Config): Promise<Fetched> {

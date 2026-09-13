@@ -139,16 +139,21 @@ describe('choiceForUrl', () => {
     });
   });
 
-  it('offers download images and render slideshow for Instagram URLs', () => {
-    const expected = {
+  it('offers download images and render slideshow only for Instagram /p/ posts', () => {
+    expect(choiceForUrl('https://www.instagram.com/p/abc')).toEqual({
       message: IG_CHOICE_MESSAGE,
       buttons: [
         { action: 'dl', label: 'Download images' },
         { action: 'ss', label: 'Render slideshow' },
       ],
-    };
-    expect(choiceForUrl('https://www.instagram.com/p/abc')).toEqual(expected);
-    expect(choiceForUrl('https://www.instagram.com/reel/abc')).toEqual(expected);
+    });
+  });
+
+  it('offers download video for Instagram reels', () => {
+    expect(choiceForUrl('https://www.instagram.com/reel/abc')).toEqual({
+      message: VIDEO_CHOICE_MESSAGE,
+      buttons: [{ action: 'dl', label: 'Download video' }],
+    });
   });
 
   it('does not offer render when x.com only appears in a query string', () => {

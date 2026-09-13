@@ -11,7 +11,7 @@ No watermarks to hunt for, no “open in browser” detours. Send the bot a post
 | Platform | What you can do |
 |----------|------------------|
 | **TikTok** | Download videos · turn photo slideshows into MP4s |
-| **Instagram** | Download photos or reels · **or** render a photo slideshow as MP4 |
+| **Instagram** | Download reels · download `/p/` photos · **or** render a `/p/` slideshow as MP4 |
 | **X (Twitter)** | Download the video **or** render a dark feed-card clip of the post |
 
 Paste a link, then tap a confirm button. The job starts on that tap — if you're on cooldown, the bot tells you how long to wait and the button stays so you don't have to paste the URL again.
@@ -21,10 +21,10 @@ Paste a link, then tap a confirm button. The job starts on that tap — if you'r
 - **Photo slideshows** — stitched into one video with even timing and a short crossfade
 
 ### Instagram
-Paste an Instagram link and pick what you want (no commands):
-
-- **Download images** — photos as-is (one photo, or an album). Video reels still come back as MP4.
-- **Render slideshow** — photos stitched into one MP4 with music when the post has it (same idea as TikTok slides), including a single image.
+- **Reels** (`/reel/`) — downloaded as MP4
+- **Photo posts** (`/p/`) — pick what you want:
+  - **Download images** — one photo, or an album for carousels
+  - **Render slideshow** — photos stitched into one MP4 with music when the post has it
 
 Mixed photo+video carousels are not supported (the bot tells you clearly).
 
