@@ -58,22 +58,15 @@ vi.mock('../../src/fetch/dumpInstagramCarousel.js', () => {
       this.name = 'MixedCarouselError';
     }
   }
-  class SingleImageError extends Error {
-    constructor() {
-      super('Single-image posts are not supported. Send a carousel or a reel.');
-      this.name = 'SingleImageError';
-    }
-  }
   return {
     dumpInstagramCarousel: (...args: unknown[]) => dumpInstagramCarousel(...args),
     MixedCarouselError,
-    SingleImageError,
   };
 });
 
 import type { Config } from '../../src/config/index.js';
 import type { PostInfo } from '../../src/fetch/classify.js';
-import { MixedCarouselError, SingleImageError } from '../../src/fetch/dumpInstagramCarousel.js';
+import { MixedCarouselError } from '../../src/fetch/dumpInstagramCarousel.js';
 import { createPipeline } from '../../src/pipeline.js';
 
 const config: Config = {
@@ -178,7 +171,7 @@ describe('createPipeline', () => {
     const result = await runPipeline(job, onStage);
 
     expect(stages).toEqual(['Fetching', 'Uploading']);
-    expect(result).toEqual({ outputPath: '/tmp/video.mp4' });
+    expect(result).toEqual({ outputPath: '/tmp/video.mp4', kind: 'video' });
 
     expect(resolveTikTokUrl).toHaveBeenCalledWith(job.url, job.jobId);
     expect(dumpJson).toHaveBeenCalledWith(
@@ -278,9 +271,10 @@ describe('createPipeline', () => {
     const result = await runPipeline(job, onStage);
 
     expect(stages).toEqual(['Fetching', 'Uploading']);
-    expect(result).toEqual({ outputPath: '/tmp/ig-reel.mp4' });
+    expect(result).toEqual({ outputPath: '/tmp/ig-reel.mp4', kind: 'video' });
 
     expect(resolveInstagramUrl).toHaveBeenCalledWith(job.url, job.jobId);
+    expect(dumpInstagramCarousel).not.toHaveBeenCalled();
     expect(downloadVideo).toHaveBeenCalledWith({
       url: 'https://www.instagram.com/reel/DYXQG03PTPI/',
       outDir: expect.any(String),
@@ -291,7 +285,6 @@ describe('createPipeline', () => {
     });
     expect(resolveTikTokUrl).not.toHaveBeenCalled();
     expect(dumpJson).not.toHaveBeenCalled();
-    expect(dumpInstagramCarousel).not.toHaveBeenCalled();
     expect(downloadInstagramCarousel).not.toHaveBeenCalled();
     expect(renderSlideshow).not.toHaveBeenCalled();
   });
@@ -301,6 +294,7 @@ describe('createPipeline', () => {
       ...baseJob(),
       jobId: 'pipe-test-ig-carousel',
       url: 'https://www.instagram.com/p/DZx_kFmGLwy/',
+      mode: 'slideshow' as const,
     };
     const withIgCookies: Config = { ...config, instagramCookiesPath: '/data/ig-cookies.txt' };
     resolveInstagramUrl.mockResolvedValue({
@@ -403,18 +397,74 @@ describe('createPipeline', () => {
     expect(renderSlideshow).not.toHaveBeenCalled();
   });
 
-  it('propagates SingleImageError from dumpInstagramCarousel', async () => {
+  it('downloads a single Instagram image and skips Rendering', async () => {
     const job = {
       ...baseJob(),
       jobId: 'pipe-test-ig-single',
       url: 'https://www.instagram.com/p/single/',
     };
+    const withIgCookies: Config = { ...config, instagramCookiesPath: '/data/ig-cookies.txt' };
     resolveInstagramUrl.mockResolvedValue({
       url: job.url,
       isCarousel: true,
       isReel: false,
     });
-    dumpInstagramCarousel.mockRejectedValue(new SingleImageError());
+    const entries = [
+      {
+        id: 'a',
+        thumbnails: [{ url: 'http://cdn/1.jpg', width: 1080, height: 1350 }],
+      },
+    ];
+    dumpInstagramCarousel.mockResolvedValue({ entries });
+    downloadInstagramCarousel.mockResolvedValue({
+      images: ['/tmp/ig/images/slide_000.jpg'],
+    });
+
+    const stages: string[] = [];
+    const onStage = vi.fn(async (stage: string) => {
+      stages.push(stage);
+    });
+
+    const runPipeline = createPipeline({ config: withIgCookies });
+    const result = await runPipeline(job, onStage);
+
+    expect(stages).toEqual(['Fetching', 'Uploading']);
+    expect(result).toEqual({
+      outputPath: '/tmp/ig/images/slide_000.jpg',
+      kind: 'image',
+      images: ['/tmp/ig/images/slide_000.jpg'],
+    });
+    expect(downloadInstagramCarousel).toHaveBeenCalledWith({
+      entries,
+      music: {},
+      outDir: expect.any(String),
+      jobId: job.jobId,
+    });
+    expect(extractMusicFromDir).not.toHaveBeenCalled();
+    expect(downloadVideo).not.toHaveBeenCalled();
+    expect(renderSlideshow).not.toHaveBeenCalled();
+  });
+
+  it('keeps Instagram reels on downloadVideo even when a dump would return cover images', async () => {
+    const job = {
+      ...baseJob(),
+      jobId: 'pipe-test-ig-reel-not-photo',
+      url: 'https://www.instagram.com/reel/PHOTO/',
+    };
+    resolveInstagramUrl.mockResolvedValue({
+      url: job.url,
+      isCarousel: false,
+      isReel: true,
+    });
+    dumpInstagramCarousel.mockResolvedValue({
+      entries: [
+        {
+          id: 'reel-cover',
+          thumbnails: [{ url: 'http://cdn/reel.jpg', width: 1080, height: 1920 }],
+        },
+      ],
+    });
+    downloadVideo.mockResolvedValue('/tmp/ig-reel.mp4');
 
     const stages: string[] = [];
     const onStage = vi.fn(async (stage: string) => {
@@ -422,14 +472,115 @@ describe('createPipeline', () => {
     });
 
     const runPipeline = createPipeline({ config });
-    const error = await runPipeline(job, onStage).catch((e: unknown) => e);
+    const result = await runPipeline(job, onStage);
 
-    expect(error).toBeInstanceOf(SingleImageError);
-    expect((error as Error).name).toBe('SingleImageError');
-    expect(stages).toEqual(['Fetching']);
-    expect(onStage).not.toHaveBeenCalledWith('Rendering');
-    expect(onStage).not.toHaveBeenCalledWith('Uploading');
+    expect(stages).toEqual(['Fetching', 'Uploading']);
+    expect(result).toEqual({ outputPath: '/tmp/ig-reel.mp4', kind: 'video' });
+    expect(dumpInstagramCarousel).not.toHaveBeenCalled();
     expect(downloadInstagramCarousel).not.toHaveBeenCalled();
+    expect(downloadVideo).toHaveBeenCalled();
+    expect(renderSlideshow).not.toHaveBeenCalled();
+  });
+
+  it('downloads a multi-image carousel as photos when mode is passthrough', async () => {
+    const job = {
+      ...baseJob(),
+      jobId: 'pipe-test-ig-album',
+      url: 'https://www.instagram.com/p/DZx_kFmGLwy/',
+    };
+    resolveInstagramUrl.mockResolvedValue({
+      url: job.url,
+      isCarousel: true,
+      isReel: false,
+    });
+    const entries = [
+      { id: 'a', thumbnails: [{ url: 'http://cdn/1.jpg', width: 1080, height: 1080 }] },
+      { id: 'b', thumbnails: [{ url: 'http://cdn/2.jpg', width: 1080, height: 1080 }] },
+    ];
+    dumpInstagramCarousel.mockResolvedValue({ entries });
+    downloadInstagramCarousel.mockResolvedValue({
+      images: ['/tmp/ig/images/slide_000.jpg', '/tmp/ig/images/slide_001.jpg'],
+    });
+
+    const stages: string[] = [];
+    const onStage = vi.fn(async (stage: string) => {
+      stages.push(stage);
+    });
+
+    const runPipeline = createPipeline({ config });
+    const result = await runPipeline(job, onStage);
+
+    expect(stages).toEqual(['Fetching', 'Uploading']);
+    expect(result).toEqual({
+      outputPath: '/tmp/ig/images/slide_000.jpg',
+      kind: 'image',
+      images: ['/tmp/ig/images/slide_000.jpg', '/tmp/ig/images/slide_001.jpg'],
+    });
+    expect(downloadInstagramCarousel).toHaveBeenCalledWith({
+      entries,
+      music: {},
+      outDir: expect.any(String),
+      jobId: job.jobId,
+    });
+    expect(extractMusicFromDir).not.toHaveBeenCalled();
+    expect(renderSlideshow).not.toHaveBeenCalled();
+    expect(downloadVideo).not.toHaveBeenCalled();
+  });
+
+  it('renders a single Instagram image as a slideshow when mode is slideshow', async () => {
+    const job = {
+      ...baseJob(),
+      jobId: 'pipe-test-ig-single-ss',
+      url: 'https://www.instagram.com/p/single/',
+      mode: 'slideshow' as const,
+    };
+    resolveInstagramUrl.mockResolvedValue({
+      url: job.url,
+      isCarousel: true,
+      isReel: false,
+    });
+    const entries = [
+      { id: 'a', thumbnails: [{ url: 'http://cdn/1.jpg', width: 1080, height: 1350 }] },
+    ];
+    dumpInstagramCarousel.mockResolvedValue({ entries });
+    extractMusicFromDir.mockReturnValue({ url: 'http://cdn/audio.m4a', duration: 8 });
+    downloadInstagramCarousel.mockResolvedValue({
+      images: ['/tmp/ig/images/slide_000.jpg'],
+      audio: '/tmp/ig/audio.m4a',
+      duration: 8,
+    });
+    renderSlideshow.mockResolvedValue({ outputPath: '/tmp/ig-single.mp4' });
+
+    const stages: string[] = [];
+    const onStage = vi.fn(async (stage: string) => {
+      stages.push(stage);
+    });
+
+    const runPipeline = createPipeline({ config });
+    const result = await runPipeline(job, onStage);
+
+    expect(stages).toEqual(['Fetching', 'Rendering', 'Uploading']);
+    expect(result).toEqual({ outputPath: '/tmp/ig-single.mp4' });
+    expect(downloadInstagramCarousel).toHaveBeenCalledWith({
+      entries,
+      music: { url: 'http://cdn/audio.m4a', duration: 8 },
+      outDir: expect.any(String),
+      jobId: job.jobId,
+    });
+    expect(renderSlideshow).toHaveBeenCalled();
+    expect(downloadVideo).not.toHaveBeenCalled();
+  });
+
+  it('rejects slideshow mode for non-Instagram URLs', async () => {
+    const job = {
+      ...baseJob(),
+      url: 'https://www.tiktok.com/@u/video/1',
+      mode: 'slideshow' as const,
+    };
+    const runPipeline = createPipeline({ config });
+    await expect(runPipeline(job, async () => {})).rejects.toThrow(
+      'Slideshow render only works with Instagram links.',
+    );
     expect(renderSlideshow).not.toHaveBeenCalled();
   });
 
@@ -457,7 +608,7 @@ describe('createPipeline', () => {
     const result = await runPipeline(job, onStage);
 
     expect(stages).toEqual(['Fetching', 'Uploading']);
-    expect(result).toEqual({ outputPath: '/tmp/twitter.mp4' });
+    expect(result).toEqual({ outputPath: '/tmp/twitter.mp4', kind: 'video' });
 
     expect(resolveTwitterUrl).toHaveBeenCalledWith(job.url, job.jobId);
     expect(downloadVideo).toHaveBeenCalledWith({

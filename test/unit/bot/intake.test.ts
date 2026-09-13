@@ -3,6 +3,7 @@ import {
   CHOICE_EXPIRED_MESSAGE,
   choiceForUrl,
   extractPostUrl,
+  IG_CHOICE_MESSAGE,
   isChoicePromptMessage,
   isTwitterUrl,
   parseIntake,
@@ -131,11 +132,24 @@ describe('choiceForUrl', () => {
     });
   });
 
-  it('offers download only for TikTok and Instagram URLs', () => {
+  it('offers download only for TikTok URLs', () => {
     expect(choiceForUrl('https://www.tiktok.com/@u/video/1')).toEqual({
       message: VIDEO_CHOICE_MESSAGE,
       buttons: [{ action: 'dl', label: 'Download video' }],
     });
+  });
+
+  it('offers download images and render slideshow only for Instagram /p/ posts', () => {
+    expect(choiceForUrl('https://www.instagram.com/p/abc')).toEqual({
+      message: IG_CHOICE_MESSAGE,
+      buttons: [
+        { action: 'dl', label: 'Download images' },
+        { action: 'ss', label: 'Render slideshow' },
+      ],
+    });
+  });
+
+  it('offers download video for Instagram reels', () => {
     expect(choiceForUrl('https://www.instagram.com/reel/abc')).toEqual({
       message: VIDEO_CHOICE_MESSAGE,
       buttons: [{ action: 'dl', label: 'Download video' }],
@@ -156,6 +170,7 @@ describe('USAGE_MESSAGE', () => {
     expect(USAGE_MESSAGE).toMatch(/twitter|x/i);
     expect(USAGE_MESSAGE).toMatch(/download/i);
     expect(USAGE_MESSAGE).toMatch(/tap/i);
+    expect(USAGE_MESSAGE).toMatch(/slideshow/i);
     expect(USAGE_MESSAGE).not.toMatch(/\/xrender/i);
   });
 
@@ -163,6 +178,8 @@ describe('USAGE_MESSAGE', () => {
     expect(VIDEO_CHOICE_MESSAGE).toMatch(/download/i);
     expect(X_CHOICE_MESSAGE).toMatch(/download/i);
     expect(X_CHOICE_MESSAGE).toMatch(/render/i);
+    expect(IG_CHOICE_MESSAGE).toMatch(/download/i);
+    expect(IG_CHOICE_MESSAGE).toMatch(/slideshow/i);
   });
 });
 
@@ -170,6 +187,7 @@ describe('isChoicePromptMessage', () => {
   it('matches confirm prompts only', () => {
     expect(isChoicePromptMessage(VIDEO_CHOICE_MESSAGE)).toBe(true);
     expect(isChoicePromptMessage(X_CHOICE_MESSAGE)).toBe(true);
+    expect(isChoicePromptMessage(IG_CHOICE_MESSAGE)).toBe(true);
     expect(isChoicePromptMessage(CHOICE_EXPIRED_MESSAGE)).toBe(false);
     expect(isChoicePromptMessage('Processing…')).toBe(false);
     expect(isChoicePromptMessage('Done!')).toBe(false);

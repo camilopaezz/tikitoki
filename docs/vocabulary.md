@@ -25,10 +25,28 @@ so searchability stays one-to-one.
   dedicated throwaway TikTok account, used to authenticate yt-dlp against
   TikTok's anti-bot. Path provided via env, gitignored. When absent, the bot
   degrades to public-only content.
-- **Passthrough** — the code path for video posts: `yt-dlp -o out.mp4 <url>`
-  then send, no rendering.
+- **Passthrough** — send downloaded media as-is, no rendering. Video
+  passthrough is `yt-dlp -o out.mp4 <url>` then `sendVideo`. **Image
+  passthrough** downloads the photo over HTTP and `sendPhoto`.
 - **Slideshow render** — the code path for slideshow posts: fetch images +
   audio, build an ffmpeg filtergraph, produce an MP4.
+
+## Instagram domain
+
+- **Instagram reel** — a `/reel/` or `/reels/` URL. Always *video
+  passthrough* (`downloadVideo`). Cover stills in page dumps are ignored so
+  reels are not misclassified as photos.
+- **Instagram carousel** — a `/p/` post with two or more photos. *Image
+  passthrough* sends them as a Telegram album; *slideshow* mode renders an
+  MP4, same as a TikTok slideshow post.
+- **Single-image post** — a `/p/` post with one photo (top-level
+  `image_versions2`, no `carousel_media`). *Image passthrough* or *slideshow*
+  render, chosen by the confirm button. Only `/p/` URLs use the image dump
+  path.
+- **Image passthrough** — download the largest image candidate via HTTP
+  (Instagram Referer) and send it as a photo or album. No ffmpeg.
+- **Mixed carousel** — photos and videos in one post. Still rejected
+  (`MixedCarouselError`).
 
 ## Fetch layer (yt-dlp)
 
@@ -138,15 +156,16 @@ so searchability stays one-to-one.
 - **Placeholder message** — the "Processing…" text a job edits through
   *stages*. For a confirmed tap this is the choice message rewritten in
   place (keyboard removed).
-- **Final video message** — the `sendVideo` containing `out.mp4`, sent as a
-  new message when the job succeeds; the placeholder is then edited to done
-  or deleted.
+- **Final media message** — the `sendVideo`, `sendPhoto`, or photo album
+  (`sendMediaGroup`) sent as a new message when the job succeeds; the
+  placeholder is then edited to done or deleted.
 - **Bot token** — `BOT_TOKEN` env var. The only mandatory secret.
 - **Cookies path** — `TIKTOKI_COOKIES_PATH` env var pointing at
   `cookies.txt`. Optional; when unset we run public-only.
 - **Job mode** — how a job should process a URL: *passthrough* (default
-  download/send) or *xrender* (Twitter/X feed-card composite). Chosen by the
-  confirm button (`dl` → passthrough, `xr` → xrender) and carried on
+  download/send), *slideshow* (Instagram images rendered as an MP4), or
+  *xrender* (Twitter/X feed-card composite). Chosen by the confirm button
+  (`dl` → passthrough, `ss` → slideshow, `xr` → xrender) and carried on
   `Job.mode` into the pipeline.
 
 ## X / xrender domain

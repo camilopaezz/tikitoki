@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Config } from '../../src/config/index.js';
 import { AuthFailureError } from '../../src/fetch/authFailure.js';
-import { MixedCarouselError, SingleImageError } from '../../src/fetch/dumpInstagramCarousel.js';
+import { MixedCarouselError } from '../../src/fetch/dumpInstagramCarousel.js';
 import { createPipeline } from '../../src/pipeline.js';
 
 const REEL_URL = 'https://www.instagram.com/reel/DYXQG03PTPI/';
@@ -102,7 +102,7 @@ describeOrSkip('pipeline integration (real Instagram URLs)', () => {
   it('downloads and renders an Instagram carousel to a valid MP4', async () => {
     const jobId = 'ig-int-carousel';
     jobIds.push(jobId);
-    const job = { jobId, userId: 1, url: CAROUSEL_URL };
+    const job = { jobId, userId: 1, url: CAROUSEL_URL, mode: 'slideshow' as const };
 
     const seen: string[] = [];
     const onStage = async (stage: string) => {
@@ -119,10 +119,6 @@ describeOrSkip('pipeline integration (real Instagram URLs)', () => {
       }
       if (err instanceof MixedCarouselError) {
         console.warn(`[skip] carousel integration: mixed carousel (${jobId})`);
-        return;
-      }
-      if (err instanceof SingleImageError) {
-        console.warn(`[skip] carousel integration: single image (${jobId})`);
         return;
       }
       throw err;
@@ -143,5 +139,5 @@ describeOrSkip('pipeline integration (real Instagram URLs)', () => {
     expect(videoStream.pix_fmt).toContain('yuv420p');
     expect(Number.parseFloat(probeResult.format.duration)).toBeGreaterThan(0);
     expect(isMp4(result.outputPath)).toBe(true);
-  }, 180_000);
+  }, 360_000);
 });

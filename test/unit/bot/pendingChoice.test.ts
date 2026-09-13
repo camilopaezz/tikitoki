@@ -67,6 +67,10 @@ describe('callback data helpers', () => {
       action: 'xr',
       token,
     });
+    expect(parseCallbackData(encodeCallbackData('ss', token))).toEqual({
+      action: 'ss',
+      token,
+    });
   });
 
   it('rejects unknown callback data', () => {
@@ -78,5 +82,6 @@ describe('callback data helpers', () => {
   it('maps actions to job modes', () => {
     expect(modeFromAction('dl')).toBe('passthrough');
     expect(modeFromAction('xr')).toBe('xrender');
+    expect(modeFromAction('ss')).toBe('slideshow');
   });
 });

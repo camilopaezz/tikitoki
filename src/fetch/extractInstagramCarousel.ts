@@ -18,7 +18,7 @@ interface InstagramCandidate {
   height?: number;
 }
 
-interface CarouselMediaItem {
+interface MediaFields {
   id?: string;
   pk?: string;
   media_type?: number;
@@ -26,13 +26,30 @@ interface CarouselMediaItem {
   video_versions?: unknown[];
 }
 
-interface InstagramItem {
-  media_type?: number;
-  carousel_media?: CarouselMediaItem[];
+interface InstagramItem extends MediaFields {
+  carousel_media?: MediaFields[];
 }
 
 interface InstagramApiResponse {
   items?: InstagramItem[];
+}
+
+function hasVideo(media: MediaFields): boolean {
+  return (media.video_versions?.length ?? 0) > 0;
+}
+
+function candidatesFrom(media: MediaFields): CarouselImageCandidate[] {
+  return (media.image_versions2?.candidates ?? [])
+    .filter((c): c is InstagramCandidate & { url: string } => Boolean(c.url))
+    .map((c) => ({ url: c.url, width: c.width, height: c.height }));
+}
+
+function toCarouselItem(media: MediaFields): CarouselItem {
+  return {
+    id: String(media.id ?? media.pk ?? ''),
+    hasVideo: hasVideo(media),
+    candidates: candidatesFrom(media),
+  };
 }
 
 export function extractCarouselFromJson(raw: string): CarouselItem[] {
@@ -47,20 +64,13 @@ export function extractCarouselFromJson(raw: string): CarouselItem[] {
   for (const item of items) {
     const carousel = item.carousel_media ?? [];
     if (carousel.length === 0) continue;
+    return carousel.map(toCarouselItem);
+  }
 
-    return carousel.map((media) => {
-      const candidates = (media.image_versions2?.candidates ?? [])
-        .filter((c): c is InstagramCandidate & { url: string } => Boolean(c.url))
-        .map((c) => ({ url: c.url, width: c.width, height: c.height }));
-
-      const hasVideo = media.media_type === 2 || (media.video_versions?.length ?? 0) > 0;
-
-      return {
-        id: String(media.id ?? media.pk ?? ''),
-        hasVideo,
-        candidates,
-      };
-    });
+  for (const item of items) {
+    if (hasVideo(item)) continue;
+    const mapped = toCarouselItem(item);
+    if (mapped.candidates.length > 0) return [mapped];
   }
 
   return [];
