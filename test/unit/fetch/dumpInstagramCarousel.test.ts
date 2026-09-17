@@ -15,7 +15,6 @@ import {
   type CarouselMetadata,
   dumpInstagramCarousel,
   MixedCarouselError,
-  SingleImageError,
 } from '../../../src/fetch/dumpInstagramCarousel.js';
 import type { CarouselItem } from '../../../src/fetch/extractInstagramCarousel.js';
 
@@ -71,18 +70,19 @@ describe('dumpInstagramCarousel', () => {
     ).rejects.toBeInstanceOf(MixedCarouselError);
   });
 
-  it('throws SingleImageError when only one entry is returned', async () => {
+  it('returns a single image entry instead of rejecting', async () => {
     extractCarouselFromDir.mockReturnValue([imageItem('a')]);
 
-    await expect(
-      dumpInstagramCarousel({
-        url: 'https://www.instagram.com/p/ABC/',
-        pagesDir: '/tmp/pages',
-      }),
-    ).rejects.toBeInstanceOf(SingleImageError);
+    const result = await dumpInstagramCarousel({
+      url: 'https://www.instagram.com/p/ABC/',
+      pagesDir: '/tmp/pages',
+    });
+
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0].id).toBe('a');
   });
 
-  it('throws MixedCarouselError before SingleImageError for a single video entry', async () => {
+  it('throws MixedCarouselError for a single video entry', async () => {
     extractCarouselFromDir.mockReturnValue([videoItem('solo')]);
 
     await expect(
@@ -155,15 +155,15 @@ describe('dumpInstagramCarousel', () => {
     expect(result.entries).toHaveLength(2);
   });
 
-  it('throws on an empty carousel', async () => {
+  it('returns empty entries when the dump has no image items', async () => {
     extractCarouselFromDir.mockReturnValue([]);
 
-    await expect(
-      dumpInstagramCarousel({
-        url: 'https://www.instagram.com/p/ABC/',
-        pagesDir: '/tmp/pages',
-      }),
-    ).rejects.toThrow(/no entries/);
+    const result = await dumpInstagramCarousel({
+      url: 'https://www.instagram.com/p/ABC/',
+      pagesDir: '/tmp/pages',
+    });
+
+    expect(result.entries).toEqual([]);
   });
 
   it('maps extractor candidates onto entry thumbnails', async () => {

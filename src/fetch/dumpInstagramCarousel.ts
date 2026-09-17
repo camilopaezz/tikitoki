@@ -18,13 +18,6 @@ export class MixedCarouselError extends Error {
   }
 }
 
-export class SingleImageError extends Error {
-  constructor() {
-    super('Single-image posts are not supported. Send a carousel or a reel.');
-    this.name = 'SingleImageError';
-  }
-}
-
 export interface CarouselEntry {
   id: string;
   thumbnails: { url: string; width?: number; height?: number }[];
@@ -78,14 +71,6 @@ export async function dumpInstagramCarousel(opts: {
 
   if (items.some((item) => item.hasVideo)) {
     throw new MixedCarouselError();
-  }
-
-  if (items.length === 1) {
-    throw new SingleImageError();
-  }
-
-  if (items.length === 0) {
-    throw new Error('Instagram carousel returned no entries from page data');
   }
 
   log.debug(`Extracted ${items.length} image carousel entries`);

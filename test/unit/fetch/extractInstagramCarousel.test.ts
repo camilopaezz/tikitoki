@@ -61,16 +61,31 @@ describe('extractCarouselFromJson', () => {
     expect(items[1].candidates).toHaveLength(1);
   });
 
-  it('marks entries with media_type 2 as video', () => {
+  it('marks entries with non-empty video_versions as video', () => {
     const raw = apiResponse([
       carouselMediaItem({ id: 'img', mediaType: 1 }),
-      carouselMediaItem({ id: 'vid', mediaType: 2 }),
+      carouselMediaItem({
+        id: 'vid',
+        mediaType: 2,
+        videoVersions: [{ url: 'https://cdn/v.mp4' }],
+      }),
     ]);
 
     const items = extractCarouselFromJson(raw);
 
     expect(items[0].hasVideo).toBe(false);
     expect(items[1].hasVideo).toBe(true);
+  });
+
+  it('does not treat media_type 2 with empty video_versions as video', () => {
+    const raw = apiResponse([
+      carouselMediaItem({ id: 'photo-reel', mediaType: 2, videoVersions: [] }),
+    ]);
+
+    const items = extractCarouselFromJson(raw);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].hasVideo).toBe(false);
   });
 
   it('marks entries with video_versions as video regardless of media_type', () => {
@@ -120,8 +135,74 @@ describe('extractCarouselFromJson', () => {
     expect(items).toEqual([]);
   });
 
-  it('returns empty array when no item has carousel_media', () => {
+  it('returns empty array when no item has carousel_media or image candidates', () => {
     const raw = JSON.stringify({ items: [{ id: 'x', media_type: 1 }] });
+    expect(extractCarouselFromJson(raw)).toEqual([]);
+  });
+
+  it('extracts a single photo from the top-level item when there is no carousel_media', () => {
+    const raw = JSON.stringify({
+      items: [
+        {
+          id: 'photo',
+          pk: 'photo',
+          media_type: 1,
+          image_versions2: {
+            candidates: [
+              { url: 'https://cdn/photo_large.jpg', width: 1440, height: 1800 },
+              { url: 'https://cdn/photo_small.jpg', width: 320, height: 400 },
+            ],
+          },
+        },
+      ],
+    });
+
+    const items = extractCarouselFromJson(raw);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].id).toBe('photo');
+    expect(items[0].hasVideo).toBe(false);
+    expect(items[0].candidates).toHaveLength(2);
+    expect(items[0].candidates[0].url).toBe('https://cdn/photo_large.jpg');
+  });
+
+  it('extracts a photo reel (media_type 2, empty video_versions, image_versions2)', () => {
+    const raw = JSON.stringify({
+      items: [
+        {
+          id: 'reel-photo',
+          media_type: 2,
+          product_type: 'clips',
+          image_versions2: {
+            candidates: [{ url: 'https://cdn/reel.jpg', width: 1080, height: 1920 }],
+          },
+          video_versions: [],
+        },
+      ],
+    });
+
+    const items = extractCarouselFromJson(raw);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].id).toBe('reel-photo');
+    expect(items[0].hasVideo).toBe(false);
+    expect(items[0].candidates[0].url).toBe('https://cdn/reel.jpg');
+  });
+
+  it('returns empty array for a top-level video item so callers can passthrough', () => {
+    const raw = JSON.stringify({
+      items: [
+        {
+          id: 'reel-video',
+          media_type: 2,
+          image_versions2: {
+            candidates: [{ url: 'https://cdn/cover.jpg', width: 1080, height: 1920 }],
+          },
+          video_versions: [{ url: 'https://cdn/v.mp4' }],
+        },
+      ],
+    });
+
     expect(extractCarouselFromJson(raw)).toEqual([]);
   });
 

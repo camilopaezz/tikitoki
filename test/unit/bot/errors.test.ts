@@ -7,7 +7,7 @@ import {
 } from '../../../src/bot/errors.js';
 import { AuthFailureError } from '../../../src/fetch/authFailure.js';
 import { OversizedVideoError } from '../../../src/fetch/downloadVideo.js';
-import { MixedCarouselError, SingleImageError } from '../../../src/fetch/dumpInstagramCarousel.js';
+import { MixedCarouselError } from '../../../src/fetch/dumpInstagramCarousel.js';
 import { TwitterSyndicationError } from '../../../src/fetch/fetchTwitterSyndication.js';
 import { TwitterChromeMapError } from '../../../src/fetch/mapTwitterChrome.js';
 import { NoVideoError } from '../../../src/fetch/noVideo.js';
@@ -58,12 +58,6 @@ describe('userFacingMessage', () => {
     );
   });
 
-  it('maps single image errors to the carousel or reel prompt', () => {
-    expect(userFacingMessage(new SingleImageError())).toBe(
-      "Single images aren't supported. Send a carousel or a reel.",
-    );
-  });
-
   it('maps no-video errors to a clear user message', () => {
     expect(userFacingMessage(new NoVideoError())).toBe(
       "That post doesn't have a downloadable video.",
@@ -90,10 +84,6 @@ describe('isOperatorAlert', () => {
 
   it('returns false for mixed carousel errors', () => {
     expect(isOperatorAlert(new MixedCarouselError())).toBe(false);
-  });
-
-  it('returns false for single image errors', () => {
-    expect(isOperatorAlert(new SingleImageError())).toBe(false);
   });
 
   it('returns false for other errors', () => {

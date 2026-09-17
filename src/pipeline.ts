@@ -28,11 +28,18 @@ export interface PipelineOptions {
 
 type Fetched =
   | { kind: 'video'; outputPath: string }
+  | { kind: 'image'; outputPath: string; images: string[] }
   | { kind: 'slideshow'; assets: SlideshowAssets };
 
 async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise<Fetched> {
   const resolved = await resolveInstagramUrl(job.url, job.jobId);
 
+  if (!resolved.isReel && !resolved.isCarousel) {
+    throw new Error(`Unsupported Instagram URL (not a reel or carousel): ${resolved.url}`);
+  }
+
+  // Reels are video-only. Cover thumbnails in page dumps look like photos and
+  // must not take the image/slideshow path — only /p/ posts do that.
   if (resolved.isReel) {
     const outputPath = await downloadVideo({
       url: resolved.url,
@@ -45,15 +52,20 @@ async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise
     return { kind: 'video', outputPath };
   }
 
-  if (resolved.isCarousel) {
-    const pagesDir = join(jobDir, 'pages');
-    await mkdir(pagesDir, { recursive: true });
-    const { entries } = await dumpInstagramCarousel({
-      url: resolved.url,
-      cookiesPath: config.instagramCookiesPath,
-      pagesDir,
-      jobId: job.jobId,
-    });
+  const pagesDir = join(jobDir, 'pages');
+  await mkdir(pagesDir, { recursive: true });
+  const { entries } = await dumpInstagramCarousel({
+    url: resolved.url,
+    cookiesPath: config.instagramCookiesPath,
+    pagesDir,
+    jobId: job.jobId,
+  });
+
+  if (entries.length === 0) {
+    throw new Error('Instagram post returned no downloadable images from page data');
+  }
+
+  if (job.mode === 'slideshow') {
     const music = extractMusicFromDir(pagesDir);
     const assets = await downloadInstagramCarousel({
       entries,
@@ -64,7 +76,13 @@ async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise
     return { kind: 'slideshow', assets };
   }
 
-  throw new Error(`Unsupported Instagram URL (not a reel or carousel): ${resolved.url}`);
+  const assets = await downloadInstagramCarousel({
+    entries,
+    music: {},
+    outDir: jobDir,
+    jobId: job.jobId,
+  });
+  return { kind: 'image', outputPath: assets.images[0], images: assets.images };
 }
 
 async function fetchTwitter(job: Job, jobDir: string, config: Config): Promise<Fetched> {
@@ -191,16 +209,22 @@ export function createPipeline(options: PipelineOptions) {
       return runXRender(job, jobDir, config, onStage, log);
     }
 
+    if (job.mode === 'slideshow' && !isInstagramUrl(job.url)) {
+      throw new Error('Slideshow render only works with Instagram links.');
+    }
+
     const fetched = isInstagramUrl(job.url)
       ? await fetchInstagram(job, jobDir, config)
       : isTwitterUrl(job.url)
         ? await fetchTwitter(job, jobDir, config)
         : await fetchTikTok(job, jobDir, config, log);
 
-    if (fetched.kind === 'video') {
-      // Video posts bypass the Rendering stage.
+    if (fetched.kind === 'video' || fetched.kind === 'image') {
+      // Video and image downloads bypass the Rendering stage.
       await onStage('Uploading');
-      return { outputPath: fetched.outputPath };
+      return fetched.kind === 'image'
+        ? { outputPath: fetched.outputPath, kind: 'image', images: fetched.images }
+        : { outputPath: fetched.outputPath, kind: 'video' };
     }
 
     await onStage('Rendering');

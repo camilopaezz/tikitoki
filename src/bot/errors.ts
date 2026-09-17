@@ -1,6 +1,6 @@
 import { AuthFailureError } from '../fetch/authFailure.js';
 import { OversizedVideoError } from '../fetch/downloadVideo.js';
-import { MixedCarouselError, SingleImageError } from '../fetch/dumpInstagramCarousel.js';
+import { MixedCarouselError } from '../fetch/dumpInstagramCarousel.js';
 import { TwitterSyndicationError } from '../fetch/fetchTwitterSyndication.js';
 import { TwitterChromeMapError } from '../fetch/mapTwitterChrome.js';
 import { NoVideoError } from '../fetch/noVideo.js';
@@ -21,9 +21,6 @@ export function userFacingMessage(err: unknown): string {
   }
   if (err instanceof MixedCarouselError) {
     return "This post mixes photos and videos, which isn't supported yet. Send a photo-only carousel or a reel.";
-  }
-  if (err instanceof SingleImageError) {
-    return "Single images aren't supported. Send a carousel or a reel.";
   }
   if (err instanceof NoVideoError) {
     return "That post doesn't have a downloadable video.";

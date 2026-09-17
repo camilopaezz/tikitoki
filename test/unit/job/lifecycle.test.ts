@@ -53,7 +53,7 @@ describe('runJobLifecycle', () => {
     ).rejects.toThrow('boom');
   });
 
-  it('defaults job.mode to passthrough and forwards explicit xrender', async () => {
+  it('defaults job.mode to passthrough and forwards explicit modes', async () => {
     const worker = vi.fn().mockResolvedValue({ outputPath: '/tmp/out.mp4' });
 
     await runJobLifecycle({ userId: 1, url: 'https://x.com/u/status/1', worker });
@@ -66,5 +66,13 @@ describe('runJobLifecycle', () => {
       worker,
     });
     expect(worker.mock.calls[1][0].mode).toBe('xrender');
+
+    await runJobLifecycle({
+      userId: 1,
+      url: 'https://www.instagram.com/p/abc',
+      mode: 'slideshow',
+      worker,
+    });
+    expect(worker.mock.calls[2][0].mode).toBe('slideshow');
   });
 });
