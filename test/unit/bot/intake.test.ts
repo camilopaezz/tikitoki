@@ -143,7 +143,7 @@ describe('choiceForUrl', () => {
     expect(choiceForUrl('https://www.instagram.com/p/abc')).toEqual({
       message: IG_CHOICE_MESSAGE,
       buttons: [
-        { action: 'dl', label: 'Download images' },
+        { action: 'dl', label: 'Download media' },
         { action: 'ss', label: 'Render slideshow' },
       ],
     });

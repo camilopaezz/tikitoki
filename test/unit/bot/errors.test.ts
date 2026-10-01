@@ -54,7 +54,7 @@ describe('userFacingMessage', () => {
 
   it('maps mixed carousel errors to the photo-only carousel or reel prompt', () => {
     expect(userFacingMessage(new MixedCarouselError())).toBe(
-      "This post mixes photos and videos, which isn't supported yet. Send a photo-only carousel or a reel.",
+      'Slideshow rendering only supports photo-only posts. Use Download media for this post.',
     );
   });
 

@@ -367,32 +367,20 @@ describe('createPipeline', () => {
     expect(downloadSlideshow).not.toHaveBeenCalled();
   });
 
-  it('propagates MixedCarouselError from dumpInstagramCarousel', async () => {
+  it('rejects video entries only when rendering a slideshow', async () => {
     const job = {
       ...baseJob(),
       jobId: 'pipe-test-ig-mixed',
       url: 'https://www.instagram.com/p/mixed/',
+      mode: 'slideshow' as const,
     };
-    resolveInstagramUrl.mockResolvedValue({
-      url: job.url,
-      isCarousel: true,
-      isReel: false,
+    resolveInstagramUrl.mockResolvedValue({ url: job.url, isCarousel: true, isReel: false });
+    dumpInstagramCarousel.mockResolvedValue({
+      entries: [{ id: 'video', hasVideo: true, videos: [{ url: 'https://cdn/v.mp4' }] }],
     });
-    dumpInstagramCarousel.mockRejectedValue(new MixedCarouselError());
-
-    const stages: string[] = [];
-    const onStage = vi.fn(async (stage: string) => {
-      stages.push(stage);
-    });
-
-    const runPipeline = createPipeline({ config });
-    const error = await runPipeline(job, onStage).catch((e: unknown) => e);
-
-    expect(error).toBeInstanceOf(MixedCarouselError);
-    expect((error as Error).name).toBe('MixedCarouselError');
-    expect(stages).toEqual(['Fetching']);
-    expect(onStage).not.toHaveBeenCalledWith('Rendering');
-    expect(onStage).not.toHaveBeenCalledWith('Uploading');
+    await expect(createPipeline({ config })(job, vi.fn())).rejects.toBeInstanceOf(
+      MixedCarouselError,
+    );
     expect(downloadInstagramCarousel).not.toHaveBeenCalled();
     expect(renderSlideshow).not.toHaveBeenCalled();
   });
@@ -437,6 +425,7 @@ describe('createPipeline', () => {
     expect(downloadInstagramCarousel).toHaveBeenCalledWith({
       entries,
       music: {},
+      maxSizeMb: 45,
       outDir: expect.any(String),
       jobId: job.jobId,
     });
@@ -519,6 +508,7 @@ describe('createPipeline', () => {
     expect(downloadInstagramCarousel).toHaveBeenCalledWith({
       entries,
       music: {},
+      maxSizeMb: 45,
       outDir: expect.any(String),
       jobId: job.jobId,
     });

@@ -14,7 +14,6 @@ import { AuthFailureError } from '../../../src/fetch/authFailure.js';
 import {
   type CarouselMetadata,
   dumpInstagramCarousel,
-  MixedCarouselError,
 } from '../../../src/fetch/dumpInstagramCarousel.js';
 import type { CarouselItem } from '../../../src/fetch/extractInstagramCarousel.js';
 
@@ -34,6 +33,7 @@ function videoItem(id: string): CarouselItem {
   return {
     id,
     hasVideo: true,
+    videos: [{ url: `https://cdn.example.com/${id}.mp4`, width: 1080, height: 1920 }],
     candidates: [{ url: `https://cdn.example.com/${id}.jpg`, width: 1080, height: 1080 }],
   };
 }
@@ -59,15 +59,14 @@ describe('dumpInstagramCarousel', () => {
     expect(result.entries[2].id).toBe('c');
   });
 
-  it('throws MixedCarouselError when any entry has video formats', async () => {
+  it('returns mixed photos and videos in post order', async () => {
     extractCarouselFromDir.mockReturnValue([imageItem('a'), videoItem('b')]);
-
-    await expect(
-      dumpInstagramCarousel({
-        url: 'https://www.instagram.com/p/ABC/',
-        pagesDir: '/tmp/pages',
-      }),
-    ).rejects.toBeInstanceOf(MixedCarouselError);
+    const result = await dumpInstagramCarousel({
+      url: 'https://www.instagram.com/p/ABC/',
+      pagesDir: '/tmp/pages',
+    });
+    expect(result.entries.map((entry) => entry.id)).toEqual(['a', 'b']);
+    expect(result.entries[1].videos?.[0].url).toBe('https://cdn.example.com/b.mp4');
   });
 
   it('returns a single image entry instead of rejecting', async () => {
@@ -82,15 +81,13 @@ describe('dumpInstagramCarousel', () => {
     expect(result.entries[0].id).toBe('a');
   });
 
-  it('throws MixedCarouselError for a single video entry', async () => {
+  it('returns a single video carousel entry', async () => {
     extractCarouselFromDir.mockReturnValue([videoItem('solo')]);
-
-    await expect(
-      dumpInstagramCarousel({
-        url: 'https://www.instagram.com/p/ABC/',
-        pagesDir: '/tmp/pages',
-      }),
-    ).rejects.toBeInstanceOf(MixedCarouselError);
+    const result = await dumpInstagramCarousel({
+      url: 'https://www.instagram.com/p/ABC/',
+      pagesDir: '/tmp/pages',
+    });
+    expect(result.entries[0].hasVideo).toBe(true);
   });
 
   it('throws AuthFailureError on auth-failure stderr', async () => {
