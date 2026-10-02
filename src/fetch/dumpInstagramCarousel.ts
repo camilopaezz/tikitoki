@@ -13,7 +13,7 @@ const logger = createLogger();
 
 export class MixedCarouselError extends Error {
   constructor() {
-    super('Mixed carousels (images + videos) are not supported yet.');
+    super('Slideshow rendering only supports photo-only posts. Use Download media for this post.');
     this.name = 'MixedCarouselError';
   }
 }
@@ -21,6 +21,8 @@ export class MixedCarouselError extends Error {
 export interface CarouselEntry {
   id: string;
   thumbnails: { url: string; width?: number; height?: number }[];
+  hasVideo?: boolean;
+  videos?: { url: string; width?: number; height?: number }[];
 }
 
 export interface CarouselMetadata {
@@ -69,15 +71,13 @@ export async function dumpInstagramCarousel(opts: {
 
   const items = extractCarouselFromDir(opts.pagesDir);
 
-  if (items.some((item) => item.hasVideo)) {
-    throw new MixedCarouselError();
-  }
-
-  log.debug(`Extracted ${items.length} image carousel entries`);
+  log.debug(`Extracted ${items.length} carousel entries`);
 
   const entries: CarouselEntry[] = items.map((item) => ({
     id: item.id,
     thumbnails: item.candidates,
+    hasVideo: item.hasVideo,
+    videos: item.videos,
   }));
 
   return { entries };

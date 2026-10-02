@@ -36,17 +36,18 @@ so searchability stays one-to-one.
 - **Instagram reel** — a `/reel/` or `/reels/` URL. Always *video
   passthrough* (`downloadVideo`). Cover stills in page dumps are ignored so
   reels are not misclassified as photos.
-- **Instagram carousel** — a `/p/` post with two or more photos. *Image
-  passthrough* sends them as a Telegram album; *slideshow* mode renders an
-  MP4, same as a TikTok slideshow post.
+- **Instagram carousel** — a `/p/` post with two or more photos or videos.
+  Download mode sends them in order as Telegram albums; *slideshow* mode
+  renders photo-only posts as an MP4.
 - **Single-image post** — a `/p/` post with one photo (top-level
   `image_versions2`, no `carousel_media`). *Image passthrough* or *slideshow*
   render, chosen by the confirm button. Only `/p/` URLs use the image dump
   path.
 - **Image passthrough** — download the largest image candidate via HTTP
   (Instagram Referer) and send it as a photo or album. No ffmpeg.
-- **Mixed carousel** — photos and videos in one post. Still rejected
-  (`MixedCarouselError`).
+- **Mixed carousel** — photos and videos in one post. Download mode sends the
+  original media in order. Slideshow rendering rejects video entries
+  (`MixedCarouselError`) and directs the user to Download media.
 
 ## Fetch layer (yt-dlp)
 

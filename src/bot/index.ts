@@ -22,7 +22,7 @@ import {
   parseCallbackData,
 } from './pendingChoice.js';
 import { PROCESSING_MESSAGE, sendPlaceholder } from './placeholder.js';
-import { sendPhotos, sendVideo } from './send.js';
+import { sendMedia, sendPhotos, sendVideo } from './send.js';
 import { createStageEditor, stageHandler } from './stageUpdates.js';
 
 const logger = createLogger();
@@ -77,7 +77,9 @@ export function createBot(deps: BotDependencies): BotInstance {
           worker,
           onStage: stageHandler(createStageEditor(ctx, placeholderId, chatId)),
           deliver: async (result) => {
-            if (result.kind === 'image') {
+            if (result.kind === 'album') {
+              await sendMedia(ctx, placeholderId, result.media ?? []);
+            } else if (result.kind === 'image') {
               await sendPhotos(ctx, placeholderId, result.images ?? [result.outputPath]);
             } else {
               await sendVideo(ctx, placeholderId, result.outputPath);

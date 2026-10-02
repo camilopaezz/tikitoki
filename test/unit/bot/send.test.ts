@@ -9,7 +9,7 @@ vi.mock('node:fs', async (importOriginal) => {
   };
 });
 
-import { sendPhoto, sendPhotos, sendVideo } from '../../../src/bot/send.js';
+import { sendMedia, sendPhoto, sendPhotos, sendVideo } from '../../../src/bot/send.js';
 
 function fakeCtx() {
   return {
@@ -88,5 +88,43 @@ describe('sendPhotos', () => {
     expect(ctx.replyWithPhoto).toHaveBeenCalledOnce();
     const first = ctx.replyWithMediaGroup.mock.calls[0][0] as unknown[];
     expect(first).toHaveLength(10);
+  });
+});
+
+describe('sendMedia', () => {
+  it('sends mixed photos and videos in order', async () => {
+    const ctx = fakeCtx();
+    await sendMedia(ctx as never, 99, [
+      { type: 'photo', path: '/tmp/a.jpg' },
+      { type: 'video', path: '/tmp/b.mp4' },
+      { type: 'photo', path: '/tmp/c.jpg' },
+    ]);
+    expect(
+      ctx.replyWithMediaGroup.mock.calls[0][0].map((item: { type: string }) => item.type),
+    ).toEqual(['photo', 'video', 'photo']);
+    expect(ctx.api.editMessageText).toHaveBeenCalledWith(1, 99, 'Done!');
+  });
+
+  it('sends a trailing video individually after a full album', async () => {
+    const ctx = fakeCtx();
+    await sendMedia(ctx as never, 99, [
+      ...Array.from({ length: 10 }, (_, i) => ({ type: 'photo' as const, path: `/tmp/${i}.jpg` })),
+      { type: 'video', path: '/tmp/last.mp4' },
+    ]);
+    expect(ctx.replyWithMediaGroup.mock.calls[0][0]).toHaveLength(10);
+    expect(ctx.replyWithVideo).toHaveBeenCalledOnce();
+    expect(ctx.replyWithPhoto).not.toHaveBeenCalled();
+  });
+
+  it('does not mark a failed upload as done', async () => {
+    const ctx = fakeCtx();
+    ctx.replyWithMediaGroup.mockRejectedValue(new Error('upload failed'));
+    await expect(
+      sendMedia(ctx as never, 99, [
+        { type: 'photo', path: '/tmp/a.jpg' },
+        { type: 'video', path: '/tmp/b.mp4' },
+      ]),
+    ).rejects.toThrow('upload failed');
+    expect(ctx.api.editMessageText).not.toHaveBeenCalled();
   });
 });

@@ -12,10 +12,17 @@ export interface Job {
   mode?: JobMode;
 }
 
+export interface DownloadedMedia {
+  type: 'photo' | 'video';
+  path: string;
+}
+
 export interface JobResult {
   outputPath: string;
   /** Defaults to video when omitted (TikTok / X / xrender). */
-  kind?: 'video' | 'image';
+  kind?: 'video' | 'image' | 'album';
+  /** Ordered photos and videos for an album. */
+  media?: DownloadedMedia[];
   /** All photo paths when kind is image. One path is a single photo; 2+ is an album. */
   images?: string[];
 }

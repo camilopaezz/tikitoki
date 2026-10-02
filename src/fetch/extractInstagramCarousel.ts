@@ -10,6 +10,7 @@ export interface CarouselItem {
   id: string;
   hasVideo: boolean;
   candidates: CarouselImageCandidate[];
+  videos?: CarouselImageCandidate[];
 }
 
 interface InstagramCandidate {
@@ -23,7 +24,7 @@ interface MediaFields {
   pk?: string;
   media_type?: number;
   image_versions2?: { candidates?: InstagramCandidate[] };
-  video_versions?: unknown[];
+  video_versions?: InstagramCandidate[];
 }
 
 interface InstagramItem extends MediaFields {
@@ -49,6 +50,9 @@ function toCarouselItem(media: MediaFields): CarouselItem {
     id: String(media.id ?? media.pk ?? ''),
     hasVideo: hasVideo(media),
     candidates: candidatesFrom(media),
+    videos: (media.video_versions ?? [])
+      .filter((c): c is InstagramCandidate & { url: string } => Boolean(c.url))
+      .map((c) => ({ url: c.url, width: c.width, height: c.height })),
   };
 }
 

@@ -11,7 +11,7 @@ No watermarks to hunt for, no “open in browser” detours. Send the bot a post
 | Platform | What you can do |
 |----------|------------------|
 | **TikTok** | Download videos · turn photo slideshows into MP4s |
-| **Instagram** | Download reels · download `/p/` photos · **or** render a `/p/` slideshow as MP4 |
+| **Instagram** | Download reels · download `/p/` photos and videos · **or** render a `/p/` slideshow as MP4 |
 | **X (Twitter)** | Download the video **or** render a dark feed-card clip of the post |
 
 Paste a link, then tap a confirm button. The job starts on that tap — if you're on cooldown, the bot tells you how long to wait and the button stays so you don't have to paste the URL again.
@@ -22,11 +22,11 @@ Paste a link, then tap a confirm button. The job starts on that tap — if you'r
 
 ### Instagram
 - **Reels** (`/reel/`) — downloaded as MP4
-- **Photo posts** (`/p/`) — pick what you want:
-  - **Download images** — one photo, or an album for carousels
+- **Posts** (`/p/`) — pick what you want:
+  - **Download media** — photos and videos in their original order, grouped into albums
   - **Render slideshow** — photos stitched into one MP4 with music when the post has it
 
-Mixed photo+video carousels are not supported (the bot tells you clearly).
+Mixed photo and video carousels support downloading. Slideshow rendering is available for photo-only posts.
 
 ### X / Twitter
 Paste an X link and pick what you want (no commands):
@@ -140,7 +140,7 @@ Needs Node 20+, `ffmpeg`, `yt-dlp`, and Chromium/Chrome for X feed-card renders.
 | Message / issue | What to try |
 |-----------------|-------------|
 | “Couldn’t fetch that post right now” | Auth challenge — refresh platform cookies and restart |
-| Mixed photos + videos (Instagram) | Use a photo-only carousel or a reel |
+| Mixed photos + videos cannot render a slideshow | Tap Download media to get the photos and videos |
 | Video too large | Source is over `TARGET_SIZE_MB`; try another share/quality |
 | Long slideshows look 720p | Automatic downscale to stay under size limits — expected |
 | X render stuck on “Rendering” | Headless Chromium hung — bot now times out (~20s) and kills it. Needs `init: true` and `shm_size: "1gb"` in compose |

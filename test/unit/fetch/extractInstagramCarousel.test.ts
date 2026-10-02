@@ -75,6 +75,9 @@ describe('extractCarouselFromJson', () => {
 
     expect(items[0].hasVideo).toBe(false);
     expect(items[1].hasVideo).toBe(true);
+    expect(items[1].videos).toEqual([
+      { url: 'https://cdn/v.mp4', width: undefined, height: undefined },
+    ]);
   });
 
   it('does not treat media_type 2 with empty video_versions as video', () => {

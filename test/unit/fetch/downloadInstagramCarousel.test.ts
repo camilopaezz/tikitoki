@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { downloadInstagramCarousel } from '../../../src/fetch/downloadInstagramCarousel.js';
+import { OversizedVideoError } from '../../../src/fetch/downloadVideo.js';
 import type { CarouselEntry } from '../../../src/fetch/dumpInstagramCarousel.js';
 import type { CarouselMusic } from '../../../src/fetch/extractInstagramMusic.js';
 
@@ -46,6 +47,63 @@ describe('downloadInstagramCarousel', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     rmSync(outDir, { recursive: true, force: true });
+  });
+
+  it('downloads actual videos rather than their cover photos, preserving order', async () => {
+    fetchMock.mockImplementation((url: string) => fakeResponse(Buffer.from(url)));
+    const result = await downloadInstagramCarousel({
+      entries: [
+        entry('photo', [thumb('https://cdn/photo.jpg')]),
+        {
+          id: 'video',
+          hasVideo: true,
+          thumbnails: [thumb('https://cdn/cover.jpg')],
+          videos: [
+            thumb('https://cdn/small.mp4', 320, 240),
+            thumb('https://cdn/video.mp4', 1080, 1920),
+          ],
+        },
+        entry('last', [thumb('https://cdn/last.jpg')]),
+      ],
+      music: {},
+      outDir,
+      maxSizeMb: 45,
+    });
+    expect(result.media.map((item) => item.type)).toEqual(['photo', 'video', 'photo']);
+    expect(result.images).toHaveLength(2);
+    expect(readFileSync(result.media[1].path, 'utf8')).toBe('https://cdn/video.mp4');
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      'https://cdn/photo.jpg',
+      'https://cdn/video.mp4',
+      'https://cdn/last.jpg',
+    ]);
+  });
+
+  it('rejects oversized carousel videos', async () => {
+    fetchMock.mockImplementation(() => fakeResponse(Buffer.alloc(1024)));
+    await expect(
+      downloadInstagramCarousel({
+        entries: [
+          { id: 'v', hasVideo: true, thumbnails: [], videos: [thumb('https://cdn/video.mp4')] },
+        ],
+        music: {},
+        outDir,
+        maxSizeMb: 0.0001,
+      }),
+    ).rejects.toBeInstanceOf(OversizedVideoError);
+  });
+
+  it('does not substitute a cover photo when a video has no URL', async () => {
+    await expect(
+      downloadInstagramCarousel({
+        entries: [
+          { id: 'v', hasVideo: true, thumbnails: [thumb('https://cdn/cover.jpg')], videos: [] },
+        ],
+        music: {},
+        outDir,
+      }),
+    ).rejects.toThrow('no downloadable video URL');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('downloads each entry as slide_NNN.ext and returns the SlideshowAssets shape', async () => {

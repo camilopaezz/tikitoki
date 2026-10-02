@@ -6,7 +6,7 @@ import { downloadInstagramCarousel } from './fetch/downloadInstagramCarousel.js'
 import { downloadSlideshow, type SlideshowAssets } from './fetch/downloadSlideshow.js';
 import { downloadVideo } from './fetch/downloadVideo.js';
 import { downloadXAssets } from './fetch/downloadXAssets.js';
-import { dumpInstagramCarousel } from './fetch/dumpInstagramCarousel.js';
+import { dumpInstagramCarousel, MixedCarouselError } from './fetch/dumpInstagramCarousel.js';
 import { dumpJson } from './fetch/dumpJson.js';
 import { extractMusicFromDir } from './fetch/extractInstagramMusic.js';
 import { fetchTwitterSyndication } from './fetch/fetchTwitterSyndication.js';
@@ -14,7 +14,7 @@ import { parseTwitterStatusId } from './fetch/parseTwitterStatusId.js';
 import { resolveInstagramUrl } from './fetch/resolveInstagramUrl.js';
 import { resolveTwitterUrl } from './fetch/resolveTwitterUrl.js';
 import { resolveTikTokUrl } from './fetch/resolveUrl.js';
-import type { Job, JobResult, Stage } from './job/types.js';
+import type { DownloadedMedia, Job, JobResult, Stage } from './job/types.js';
 import { renderSlideshow } from './render/renderSlideshow.js';
 import { renderXPost } from './render/x/renderXPost.js';
 import { createLogger } from './util/logger.js';
@@ -27,6 +27,7 @@ export interface PipelineOptions {
 }
 
 type Fetched =
+  | { kind: 'album'; outputPath: string; media: DownloadedMedia[] }
   | { kind: 'video'; outputPath: string }
   | { kind: 'image'; outputPath: string; images: string[] }
   | { kind: 'slideshow'; assets: SlideshowAssets };
@@ -62,10 +63,11 @@ async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise
   });
 
   if (entries.length === 0) {
-    throw new Error('Instagram post returned no downloadable images from page data');
+    throw new Error('Instagram post returned no downloadable media from page data');
   }
 
   if (job.mode === 'slideshow') {
+    if (entries.some((entry) => entry.hasVideo)) throw new MixedCarouselError();
     const music = extractMusicFromDir(pagesDir);
     const assets = await downloadInstagramCarousel({
       entries,
@@ -79,9 +81,13 @@ async function fetchInstagram(job: Job, jobDir: string, config: Config): Promise
   const assets = await downloadInstagramCarousel({
     entries,
     music: {},
+    maxSizeMb: config.targetSizeMb,
     outDir: jobDir,
     jobId: job.jobId,
   });
+  if (entries.some((entry) => entry.hasVideo)) {
+    return { kind: 'album', outputPath: assets.media[0].path, media: assets.media };
+  }
   return { kind: 'image', outputPath: assets.images[0], images: assets.images };
 }
 
@@ -218,6 +224,11 @@ export function createPipeline(options: PipelineOptions) {
       : isTwitterUrl(job.url)
         ? await fetchTwitter(job, jobDir, config)
         : await fetchTikTok(job, jobDir, config, log);
+
+    if (fetched.kind === 'album') {
+      await onStage('Uploading');
+      return { outputPath: fetched.outputPath, kind: 'album', media: fetched.media };
+    }
 
     if (fetched.kind === 'video' || fetched.kind === 'image') {
       // Video and image downloads bypass the Rendering stage.

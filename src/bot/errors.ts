@@ -20,7 +20,7 @@ export function userFacingMessage(err: unknown): string {
     return "Couldn't load that post's card metadata. Try again later.";
   }
   if (err instanceof MixedCarouselError) {
-    return "This post mixes photos and videos, which isn't supported yet. Send a photo-only carousel or a reel.";
+    return 'Slideshow rendering only supports photo-only posts. Use Download media for this post.';
   }
   if (err instanceof NoVideoError) {
     return "That post doesn't have a downloadable video.";

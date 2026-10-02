@@ -58,7 +58,7 @@ export function choiceForUrl(url: string): ChoicePrompt {
     return {
       message: IG_CHOICE_MESSAGE,
       buttons: [
-        { action: 'dl', label: 'Download images' },
+        { action: 'dl', label: 'Download media' },
         { action: 'ss', label: 'Render slideshow' },
       ],
     };
@@ -74,14 +74,14 @@ export function isChoicePromptMessage(text: string | undefined): boolean {
 }
 
 export const USAGE_MESSAGE =
-  'Send me a TikTok, Instagram, or Twitter/X link, then tap Download. For Instagram /p/ posts you can download images or render a slideshow. For X posts you can also render a feed card.';
+  'Send me a TikTok, Instagram, or Twitter/X link, then tap Download. For Instagram /p/ posts you can download photos and videos or render a slideshow. For X posts you can also render a feed card.';
 
 export const VIDEO_CHOICE_MESSAGE = 'Download this video?';
 
 export const X_CHOICE_MESSAGE = 'X post detected. Download the video, or render a feed card?';
 
 export const IG_CHOICE_MESSAGE =
-  'Instagram post detected. Download the images, or render a slideshow?';
+  'Instagram post detected. Download the photos and videos, or render a slideshow?';
 
 export const CHOICE_EXPIRED_MESSAGE = 'That button expired. Send the link again.';
 
