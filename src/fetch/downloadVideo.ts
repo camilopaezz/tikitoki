@@ -1,6 +1,6 @@
-import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { runYtDlp } from '../process/ytDlp.js';
+import { fitVideoToSize } from '../render/fitVideoToSize.js';
 import { createLogger } from '../util/logger.js';
 import {
   isPermanentHttpClientError,
@@ -14,17 +14,7 @@ import { refererArgs } from './referer.js';
 
 const logger = createLogger();
 
-export class OversizedVideoError extends Error {
-  constructor(
-    public readonly sizeBytes: number,
-    public readonly maxBytes: number,
-  ) {
-    super(
-      `Downloaded video is ${(sizeBytes / 1024 / 1024).toFixed(1)} MB, exceeding the ${(maxBytes / 1024 / 1024).toFixed(0)} MB limit.`,
-    );
-    this.name = 'OversizedVideoError';
-  }
-}
+export { OversizedVideoError } from '../render/fitVideoToSize.js';
 
 export interface DownloadVideoOptions {
   url: string;
@@ -57,11 +47,7 @@ export async function downloadVideo(opts: DownloadVideoOptions): Promise<string>
       },
     });
     if (opts.maxSizeMb !== undefined) {
-      const maxBytes = opts.maxSizeMb * 1024 * 1024;
-      const size = statSync(outPath).size;
-      if (size > maxBytes) {
-        throw new OversizedVideoError(size, maxBytes);
-      }
+      return await fitVideoToSize(outPath, opts.maxSizeMb, opts.jobId);
     }
     return outPath;
   } catch (err) {

@@ -35,6 +35,12 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Install FFmpeg for compression tests
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Test video compression
+        run: pnpm exec vitest run --config vitest.integration.config.ts test/integration/compressVideo.integration.test.ts
+
   image:
     # Fork PRs cannot push to GHCR with GITHUB_TOKEN.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
