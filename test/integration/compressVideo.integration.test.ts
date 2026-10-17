@@ -8,14 +8,15 @@ import { fitVideoToSize } from '../../src/render/fitVideoToSize.js';
 
 describe('video compression integration', () => {
   it.each([
-    { size: '640x360', audio: true },
-    { size: '360x640', audio: false },
+    { size: '640x360', audio: true, rotation: 0, maxSizeMb: 0.12, aspect: 16 / 9 },
+    { size: '360x640', audio: false, rotation: 0, maxSizeMb: 0.12, aspect: 9 / 16 },
+    { size: '640x360', audio: false, rotation: 90, maxSizeMb: 0.6, aspect: 9 / 16 },
   ])(
-    'fits a $size video with audio=$audio under the cap without truncating',
-    async ({ size, audio }) => {
+    'fits a $size video with audio=$audio and rotation=$rotation under the cap without truncating',
+    async ({ size, audio, rotation, maxSizeMb, aspect }) => {
       const dir = mkdtempSync(join(tmpdir(), 'tikitoki-compress-'));
       try {
-        const input = join(dir, 'out.mp4');
+        let input = join(dir, 'out.mp4');
         await runFfmpeg([
           '-y',
           '-f',
@@ -32,7 +33,20 @@ describe('video compression integration', () => {
           ...(audio ? ['-c:a', 'aac'] : []),
           input,
         ]);
-        const maxSizeMb = 0.12;
+        if (rotation) {
+          const rotated = join(dir, 'rotated.mp4');
+          await runFfmpeg([
+            '-y',
+            '-display_rotation',
+            String(rotation),
+            '-i',
+            input,
+            '-c',
+            'copy',
+            rotated,
+          ]);
+          input = rotated;
+        }
         expect(statSync(input).size).toBeGreaterThan(maxSizeMb * 1024 * 1024);
         const output = await fitVideoToSize(input, maxSizeMb);
         expect(output).not.toBe(input);
@@ -53,7 +67,12 @@ describe('video compression integration', () => {
         expect(video.pix_fmt).toBe('yuv420p');
         expect(video.width % 2).toBe(0);
         expect(video.height % 2).toBe(0);
-        expect(video.width / video.height).toBeCloseTo(audio ? 16 / 9 : 9 / 16, 1);
+        expect(video.width / video.height).toBeCloseTo(aspect, 1);
+        if (rotation) {
+          // Enough bitrate for the source pixels: rotation must not shrink the display box.
+          expect(video.width).toBe(360);
+          expect(video.height).toBe(640);
+        }
         const sound = result.streams.find((s: { codec_type: string }) => s.codec_type === 'audio');
         if (audio) expect(sound.codec_name).toBe('aac');
         else expect(sound).toBeUndefined();

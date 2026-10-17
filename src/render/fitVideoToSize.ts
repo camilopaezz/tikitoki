@@ -48,11 +48,11 @@ export async function fitVideoToSize(
       720 / Math.min(width, height),
       Math.sqrt(videoBitrate / (width * height * 30 * 0.08)),
     );
-    const outWidth = Math.max(2, Math.floor((width * scale) / 2) * 2);
-    const outHeight = Math.max(2, Math.floor((height * scale) / 2) * 2);
+    // iw/ih describe the displayed frame after FFmpeg applies rotation metadata.
+    const scaleFilter = `scale=w='max(2,trunc(iw*${scale}/2)*2)':h='max(2,trunc(ih*${scale}/2)*2)',fps=30`;
     const videoArgs = [
       '-vf',
-      `scale=${outWidth}:${outHeight}:force_original_aspect_ratio=decrease:force_divisible_by=2,fps=30`,
+      scaleFilter,
       '-c:v',
       'libx264',
       '-preset',
@@ -65,7 +65,7 @@ export async function fitVideoToSize(
       `${outputPath}.passlog`,
     ];
     log.info(
-      `Compressing oversized video at ${outWidth}x${outHeight}, ${videoBitrate} bps (attempt ${attempt + 1})`,
+      `Compressing oversized video with scale ${scale.toFixed(3)}, ${videoBitrate} bps (attempt ${attempt + 1})`,
     );
     await runFfmpeg(
       [
