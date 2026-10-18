@@ -8,6 +8,6 @@ const logger = createLogger();
 export function withTelegramRetry<T>(operation: () => Promise<T>): Promise<T> {
   return withOneRetry(operation, {
     isRetryable: (err) => err instanceof HttpError,
-    onRetry: () => logger.warn('Telegram network request failed; retrying once'),
+    onRetry: (err) => logger.warn(`${(err as Error).message}; retrying once`),
   });
 }

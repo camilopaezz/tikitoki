@@ -8,7 +8,7 @@ import { withTelegramRetry } from './telegramRetry.js';
 const TELEGRAM_ALBUM_LIMIT = 10;
 const logger = createLogger();
 
-export async function editJobStatus(
+export async function editPlaceholder(
   ctx: Context,
   messageId: number,
   text: string,
@@ -18,18 +18,18 @@ export async function editJobStatus(
     await withTelegramRetry(() => ctx.api.editMessageText(chatId, messageId, text));
   } catch (err) {
     // A failed notification must not fail a completed delivery or stop polling.
-    logger.warn(`Failed to update job status: ${(err as Error).message}`);
+    logger.warn(`Failed to update placeholder: ${(err as Error).message}`);
   }
 }
 
 export async function sendVideo(ctx: Context, placeholderMessageId: number, videoPath: string) {
   await withTelegramRetry(() => ctx.replyWithVideo(new InputFile(createReadStream(videoPath))));
-  await editJobStatus(ctx, placeholderMessageId, 'Done!');
+  await editPlaceholder(ctx, placeholderMessageId, 'Done!');
 }
 
 export async function sendPhoto(ctx: Context, placeholderMessageId: number, photoPath: string) {
   await withTelegramRetry(() => ctx.replyWithPhoto(new InputFile(createReadStream(photoPath))));
-  await editJobStatus(ctx, placeholderMessageId, 'Done!');
+  await editPlaceholder(ctx, placeholderMessageId, 'Done!');
 }
 
 export async function sendPhotos(ctx: Context, placeholderMessageId: number, photoPaths: string[]) {
@@ -66,5 +66,5 @@ export async function sendMedia(
       );
     }
   }
-  await editJobStatus(ctx, placeholderMessageId, 'Done!');
+  await editPlaceholder(ctx, placeholderMessageId, 'Done!');
 }

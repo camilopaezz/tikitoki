@@ -22,7 +22,7 @@ import {
   parseCallbackData,
 } from './pendingChoice.js';
 import { PROCESSING_MESSAGE, sendPlaceholder } from './placeholder.js';
-import { editJobStatus, sendMedia, sendPhotos, sendVideo } from './send.js';
+import { editPlaceholder, sendMedia, sendPhotos, sendVideo } from './send.js';
 import { createStageEditor, stageHandler } from './stageUpdates.js';
 
 const logger = createLogger();
@@ -99,7 +99,7 @@ export function createBot(deps: BotDependencies): BotInstance {
           logger.error(alert, { userId });
           await alertOperator(alert);
         }
-        await editJobStatus(ctx, placeholderId, userFacingMessage(err), chatId);
+        await editPlaceholder(ctx, placeholderId, userFacingMessage(err), chatId);
       }
     });
   }
