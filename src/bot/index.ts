@@ -22,7 +22,7 @@ import {
   parseCallbackData,
 } from './pendingChoice.js';
 import { PROCESSING_MESSAGE, sendPlaceholder } from './placeholder.js';
-import { sendMedia, sendPhotos, sendVideo } from './send.js';
+import { editJobStatus, sendMedia, sendPhotos, sendVideo } from './send.js';
 import { createStageEditor, stageHandler } from './stageUpdates.js';
 
 const logger = createLogger();
@@ -41,6 +41,12 @@ export interface BotInstance {
 export function createBot(deps: BotDependencies): BotInstance {
   const { config, worker } = deps;
   const bot = new Bot<Context & SessionFlavor<Record<string, unknown>>>(config.botToken);
+
+  bot.catch(({ error, ctx }) => {
+    // Do not log the nested HTTP error object, which can contain the bot token.
+    const message = error instanceof Error ? error.message : 'Unknown middleware error';
+    logger.error(`Update ${ctx.update.update_id} failed: ${message}`);
+  });
 
   bot.use(session({ initial: () => ({}) }));
 
@@ -93,7 +99,7 @@ export function createBot(deps: BotDependencies): BotInstance {
           logger.error(alert, { userId });
           await alertOperator(alert);
         }
-        await ctx.api.editMessageText(chatId, placeholderId, userFacingMessage(err));
+        await editJobStatus(ctx, placeholderId, userFacingMessage(err), chatId);
       }
     });
   }

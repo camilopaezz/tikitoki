@@ -1,3 +1,4 @@
+import { HttpError } from 'grammy';
 import { AuthFailureError } from '../fetch/authFailure.js';
 import { OversizedVideoError } from '../fetch/downloadVideo.js';
 import { MixedCarouselError } from '../fetch/dumpInstagramCarousel.js';
@@ -12,6 +13,7 @@ import { ProcessTimeoutError } from '../process/run.js';
 export { XRenderNotReadyError };
 
 export function userFacingMessage(err: unknown): string {
+  if (err instanceof HttpError) return "Couldn't reach Telegram. Please send the link again.";
   if (err instanceof CooldownError) return err.message;
   if (err instanceof HourlyCapError) return err.message;
   if (err instanceof XRenderNotReadyError) return err.message;
