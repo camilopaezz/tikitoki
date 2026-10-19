@@ -141,7 +141,7 @@ Needs Node 20+, `ffmpeg`, `yt-dlp`, and Chromium/Chrome for X feed-card renders.
 |-----------------|-------------|
 | “Couldn’t fetch that post right now” | Auth challenge — refresh platform cookies and restart |
 | Mixed photos + videos cannot render a slideshow | Tap Download media to get the photos and videos |
-| Video too large | Source is over `TARGET_SIZE_MB`; try another share/quality |
+| Large video downloads | Videos over `TARGET_SIZE_MB` (default 45 MB) are compressed to H.264/AAC, up to 720p, with a bitrate chosen to fit the full video. Smaller downloads keep their original quality. |
 | Long slideshows look 720p | Automatic downscale to stay under size limits — expected |
 | X render stuck on “Rendering” | Headless Chromium hung — bot now times out (~20s) and kills it. Needs `init: true` and `shm_size: "1gb"` in compose |
 

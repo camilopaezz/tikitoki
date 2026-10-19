@@ -9,7 +9,8 @@ so searchability stays one-to-one.
 - **TikTok post** — any shareable item on TikTok. Has a unique URL and an
   `id`. Two kinds matter to us: *video posts* and *slideshow posts*.
 - **Video post** — a TikTok that is already a single encoded video file.
-  We handle it via *passthrough*: yt-dlp downloads the MP4, we send it as-is.
+  We download the MP4 and use *passthrough* when it fits the upload size
+  target. Oversized standalone downloads use the *video transcode fallback*.
 - **Slideshow post** (a.k.a. **image post**, **photo post**) — a TikTok made
   of an ordered list of images plus one background audio track. TikTok plays
   it as a timed image sequence; the platform does **not** ship a real video
@@ -26,15 +27,17 @@ so searchability stays one-to-one.
   TikTok's anti-bot. Path provided via env, gitignored. When absent, the bot
   degrades to public-only content.
 - **Passthrough** — send downloaded media as-is, no rendering. Video
-  passthrough is `yt-dlp -o out.mp4 <url>` then `sendVideo`. **Image
+  passthrough is `yt-dlp -o out.mp4 <url>` then `sendVideo` when the file fits
+  the upload size target. Larger standalone videos use the *video transcode
+  fallback* before sending. **Image
   passthrough** downloads the photo over HTTP and `sendPhoto`.
 - **Slideshow render** — the code path for slideshow posts: fetch images +
   audio, build an ffmpeg filtergraph, produce an MP4.
 
 ## Instagram domain
 
-- **Instagram reel** — a `/reel/` or `/reels/` URL. Always *video
-  passthrough* (`downloadVideo`). Cover stills in page dumps are ignored so
+- **Instagram reel** — a `/reel/` or `/reels/` URL. Always a video download
+  (`downloadVideo`), with the transcode fallback when oversized. Cover stills in page dumps are ignored so
   reels are not misclassified as photos.
 - **Instagram carousel** — a `/p/` post with two or more photos or videos.
   Download mode sends them in order as Telegram albums; *slideshow* mode
@@ -57,7 +60,8 @@ so searchability stays one-to-one.
   one JSON object to stdout without downloading media. We use it first to
   branch on slideshow-vs-video and to read image/audio URLs + durations.
 - **Fetch** — the stage of a *job* where we run yt-dlp to pull metadata and
-  download raw assets (images, audio, or a passthrough MP4).
+  download raw assets (images, audio, or a passthrough MP4). Standalone video
+  downloads also complete the transcode fallback during this stage if needed.
 - **Auth failure** — yt-dlp exit / stderr indicating TikTok blocked us
   (notably the "Sign in to confirm you're not a bot" string). Surfaced to the
   operator as a re-export-cookies alert, not a generic crash.
@@ -96,13 +100,23 @@ so searchability stays one-to-one.
   **single-pass VBV** when the max bitrate binds, and **two-pass** when the
   size budget binds.
 - **Two-pass encode** — ffmpeg `-pass 1` then `-pass 2` at the budgeted
-  bitrate. Slideshows always use it. **xrender** uses it only when the size
+  bitrate. Slideshows and the video transcode fallback always use it.
+  **xrender** uses it only when the size
   budget binds (long clips); short clips hit the 4 Mbps cap and use single-pass
   VBV instead (the second pass would mostly burn CPU while size already has
   headroom).
 - **720p downscale retry** — if the budget at full resolution would drop
   below a quality floor, re-encode downscaled to 1280x720 (preserving aspect)
   to stay under the cap.
+- **Video transcode fallback** — re-encode an oversized standalone video
+  download to H.264/AAC before upload, preserving the full duration. Small
+  downloads pass through unchanged. This uses its own bitrate budget: reserve
+  5% of the size target for overhead, allocate 15% of the bitrate to audio
+  bounded to 16–128 kbps, and cap video at 4 Mbps. Resolution is at most
+  1280x720 or 720x1280, with further downscaling when the bitrate budget calls
+  for fewer pixels at 30 fps. Verify output size and retry once at a lower
+  bitrate if necessary. This policy is separate from slideshow and xrender
+  encoding. Instagram carousel videos retain their existing size check.
 - **`yuv420p`** — the pixel format we force, required for broad player /
   Telegram compatibility.
 - **`+faststart`** — MP4 muxer flag (`-movflags +faststart`) putting the

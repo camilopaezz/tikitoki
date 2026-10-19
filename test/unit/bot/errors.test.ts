@@ -1,3 +1,4 @@
+import { HttpError } from 'grammy';
 import { describe, expect, it } from 'vitest';
 import {
   isOperatorAlert,
@@ -16,6 +17,11 @@ import { HourlyCapError } from '../../../src/job/hourlyCap.js';
 import { ProcessTimeoutError } from '../../../src/process/run.js';
 
 describe('userFacingMessage', () => {
+  it('explains Telegram transport failures without exposing nested request details', () => {
+    expect(userFacingMessage(new HttpError('Network request failed', new Error('ETIMEDOUT')))).toBe(
+      "Couldn't reach Telegram. Please send the link again.",
+    );
+  });
   it('maps cooldown errors', () => {
     expect(userFacingMessage(new CooldownError(10))).toContain('wait');
   });
