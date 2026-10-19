@@ -21,7 +21,7 @@ const NAMED_HTML_ENTITIES: Record<string, string> = {
  * (`&amp;gt;` → literal `&gt;`, not `>`).
  */
 export function decodeHtmlEntities(text: string): string {
-  if (!text || !text.includes('&')) return text;
+  if (!text?.includes('&')) return text;
   return text
     .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, body: string) => {
       const key = body.toLowerCase();

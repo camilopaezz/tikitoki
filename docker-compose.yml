@@ -1,6 +1,6 @@
 services:
   tikitoki:
-    build: .
+    image: ghcr.io/camilopaezz/tikitoki:latest
     container_name: tikitoki
     restart: unless-stopped
     environment:
