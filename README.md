@@ -130,6 +130,7 @@ pnpm test
 pnpm run test:integration
 pnpm typecheck
 pnpm lint
+pnpm bench:render   # offline render benchmark (run in the Docker image for libx264 + Chromium)
 ```
 
 Needs Node 20+, `ffmpeg`, `yt-dlp`, and Chromium/Chrome for X feed-card renders.
@@ -145,6 +146,7 @@ Needs Node 20+, `ffmpeg`, `yt-dlp`, and Chromium/Chrome for X feed-card renders.
 | Large video downloads | Videos over `TARGET_SIZE_MB` (default 45 MB) are compressed to H.264/AAC, up to 720p, with a bitrate chosen to fit the full video. Smaller downloads keep their original quality. |
 | Long slideshows look 720p | Automatic downscale to stay under size limits — expected |
 | X render stuck on “Rendering” | Headless Chromium hung — bot now times out (~20s) and kills it. Needs `init: true` and `shm_size: "1gb"` in compose |
+| X render screenshots misbehave | Renders reuse one headless Chromium (restarted on hang/crash, closed after 5 min idle). Set `TIKITOKI_CHROME_ONESHOT=1` to spawn a browser per screenshot instead |
 
 ---
 

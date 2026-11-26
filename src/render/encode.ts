@@ -22,12 +22,16 @@ export interface EncodeResult {
   outputPath: string;
 }
 
+/** Output (and still-image input) frame rate for slideshows. */
+export const SLIDESHOW_FPS = 30;
+
 function buildInputArgs(opts: EncodeOptions): string[] {
   const args: string[] = [];
-  const perSlideDuration = opts.budget.duration / opts.inputs.length;
 
+  // One decoded frame per still; the filtergraph loops it for the slide's
+  // duration. `-loop 1` would re-read and re-decode the image every frame.
   for (const input of opts.inputs) {
-    args.push('-loop', '1', '-t', String(perSlideDuration), '-i', input);
+    args.push('-framerate', String(SLIDESHOW_FPS), '-i', input);
   }
 
   if (opts.audioPath) {
@@ -76,7 +80,7 @@ function buildOutputArgs(opts: EncodeOptions, pass: 1 | 2, outputPath?: string):
     '-movflags',
     '+faststart',
     '-r',
-    '30',
+    String(SLIDESHOW_FPS),
   );
 
   if (pass === 2 && (opts.audioPath || opts.addSilentAudio)) {
