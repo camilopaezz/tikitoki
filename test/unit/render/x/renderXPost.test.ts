@@ -19,16 +19,15 @@ function lastArgs(runFfmpegFn: ReturnType<typeof vi.fn>): string[] {
 }
 
 describe('renderXPost', () => {
-  it('screenshots, measures hole, crops, then single-pass ffmpeg when max bitrate binds', async () => {
+  it('screenshots, measures hole, then single-pass ffmpeg when max bitrate binds', async () => {
     const screenshotFn = vi.fn().mockResolvedValue('/tmp/job/xchrome/chrome.png');
     const measureFn = vi.fn().mockResolvedValue({
-      x: 176,
+      x: 118,
       y: 120,
       contentHeight: 900,
       greenW: 498,
       greenH: 280,
     });
-    const cropFn = vi.fn().mockResolvedValue(undefined);
     const runFfmpegFn = vi.fn().mockResolvedValue({ stdout: '', stderr: '', code: 0 });
 
     const result = await renderXPost({
@@ -38,7 +37,6 @@ describe('renderXPost', () => {
       targetSizeMb: 45,
       screenshotFn,
       measureFn,
-      cropFn,
       runFfmpegFn,
     });
 
@@ -48,7 +46,6 @@ describe('renderXPost', () => {
     expect(screenshotFn).toHaveBeenCalledOnce();
     expect(screenshotFn).toHaveBeenCalledWith(expect.objectContaining({ width: 720, jobId: 'jx' }));
     expect(measureFn).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', { jobId: 'jx' });
-    expect(cropFn).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', 720, 900, { jobId: 'jx' });
     // Short clip → max bitrate binds → single pass
     expect(runFfmpegFn).toHaveBeenCalledTimes(1);
 
@@ -61,8 +58,11 @@ describe('renderXPost', () => {
     expect(args).toContain('-bufsize');
     expect(args).toContain('0:a?');
     expect(args).toContain('aac');
-    // Overlay uses measured media Y, not the placeholder estimate.
-    expect(args.join(' ')).toContain('overlay=176:120');
+    // Chrome is one still frame (looped in-graph), not a -loop 1 input.
+    expect(args).not.toContain('-loop');
+    // Video is placed at the measured media position, not the placeholder.
+    expect(args.join(' ')).toContain('pad=720:900:118:120:black');
+    expect(args.join(' ')).toContain('crop=720:900:0:0');
     expect(args.join(' ')).toContain('filter_complex');
     const bIdx = args.indexOf('-b:v');
     expect(bIdx).toBeGreaterThan(-1);
@@ -72,13 +72,12 @@ describe('renderXPost', () => {
   it('uses two-pass encode when the size budget binds (long clip)', async () => {
     const screenshotFn = vi.fn().mockResolvedValue('/tmp/job/xchrome/chrome.png');
     const measureFn = vi.fn().mockResolvedValue({
-      x: 176,
+      x: 118,
       y: 120,
       contentHeight: 900,
       greenW: 498,
       greenH: 280,
     });
-    const cropFn = vi.fn().mockResolvedValue(undefined);
     const runFfmpegFn = vi.fn().mockResolvedValue({ stdout: '', stderr: '', code: 0 });
 
     // 45 MB / 180s ≈ 2 Mbps → under 4 Mbps cap → size budget binds
@@ -92,7 +91,6 @@ describe('renderXPost', () => {
       targetSizeMb: 45,
       screenshotFn,
       measureFn,
-      cropFn,
       runFfmpegFn,
     });
 
@@ -112,13 +110,12 @@ describe('renderXPost', () => {
   it('scales the encode canvas when measured chrome is taller than 1280', async () => {
     const screenshotFn = vi.fn().mockResolvedValue('/tmp/job/xchrome/chrome.png');
     const measureFn = vi.fn().mockResolvedValue({
-      x: 176,
+      x: 118,
       y: 120,
       contentHeight: 1336,
       greenW: 498,
       greenH: 280,
     });
-    const cropFn = vi.fn().mockResolvedValue(undefined);
     const runFfmpegFn = vi.fn().mockResolvedValue({ stdout: '', stderr: '', code: 0 });
 
     await renderXPost({
@@ -128,15 +125,12 @@ describe('renderXPost', () => {
       targetSizeMb: 45,
       screenshotFn,
       measureFn,
-      cropFn,
       runFfmpegFn,
     });
 
-    expect(cropFn).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', 720, 1336, {
-      jobId: 'jx-tall',
-    });
     const args = lastArgs(runFfmpegFn).join(' ');
-    expect(args).toContain('color=c=black:s=');
-    expect(args).toMatch(/color=c=black:s=\d+x1280/);
+    // Crop the full measured card, then scale it to the 1280-tall encode canvas.
+    expect(args).toMatch(/crop=720:1336:0:0,format=rgba,scale=\d+:1280,/);
+    expect(args).toMatch(/pad=\d+:1280:/);
   });
 });

@@ -1,13 +1,15 @@
 import { createLogger } from '../util/logger.js';
+import { mapLimit } from '../util/mapLimit.js';
 import { perJobDir } from '../util/tmp.js';
 import { computeBitrateBudget } from './bitrate.js';
 import { pickCanvas, type Slide } from './canvas.js';
-import { writeConcatFile } from './concatDemuxer.js';
 import { twoPassEncode } from './encode.js';
 import { buildFiltergraph } from './filtergraph.js';
 import { probeImageDimensions } from './probe.js';
 import { downscaleTo720 } from './retry720.js';
 import { computeTiming } from './timing.js';
+
+const PROBE_CONCURRENCY = 6;
 
 export interface RenderSlideshowOptions {
   jobId: string;
@@ -30,11 +32,11 @@ export async function renderSlideshow(
   const log = createLogger({ jobId: opts.jobId });
   const jobDir = perJobDir(opts.jobId);
 
-  const slides: Slide[] = [];
-  for (const path of opts.images) {
-    const dims = await probeImageDimensions(path, opts.jobId);
-    slides.push({ path, ...dims });
-  }
+  // ffprobe per image, a few at a time (carousels can have 20+ stills).
+  const slides: Slide[] = await mapLimit(opts.images, PROBE_CONCURRENCY, async (path) => ({
+    path,
+    ...(await probeImageDimensions(path, opts.jobId)),
+  }));
 
   const canvas = pickCanvas(slides);
   const hasAudio = opts.audioPath !== undefined;
@@ -43,9 +45,8 @@ export async function renderSlideshow(
     opts.audioDuration,
     opts.silentSlideSeconds ?? 3,
     hasAudio,
+    opts.crossfadeSeconds ?? 0.4,
   );
-
-  writeConcatFile(opts.images, `${jobDir}/concat.txt`);
 
   const budget = computeBitrateBudget(
     opts.targetSizeMb ?? 45,
@@ -64,7 +65,6 @@ export async function renderSlideshow(
     slides,
     canvas: finalCanvas,
     timing,
-    crossfadeSeconds: opts.crossfadeSeconds ?? 0.4,
   });
 
   log.info(`Rendering ${slides.length} slides at ${finalCanvas.width}x${finalCanvas.height}`);

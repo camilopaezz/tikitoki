@@ -5,9 +5,9 @@ import { createLogger } from '../../util/logger.js';
 import { createStopwatch } from '../../util/stopwatch.js';
 import { computeBitrateBudget } from '../bitrate.js';
 import { buildChromeHtml } from './chromeHtml.js';
-import { buildXOverlayFiltergraph } from './filtergraph.js';
+import { buildXOverlayFiltergraph, XRENDER_FPS } from './filtergraph.js';
 import { layoutXPost, XRENDER_MAX_HEIGHT } from './layout.js';
-import { cropChromePng, measureChromePng } from './measureChrome.js';
+import { measureChromePng } from './measureChrome.js';
 import { screenshotChrome } from './screenshotChrome.js';
 import type { XPostLayout } from './types.js';
 
@@ -23,7 +23,6 @@ export interface RenderXPostOptions {
   screenshotFn?: typeof screenshotChrome;
   runFfmpegFn?: typeof runFfmpeg;
   measureFn?: typeof measureChromePng;
-  cropFn?: typeof cropChromePng;
 }
 
 export interface RenderXPostResult {
@@ -34,7 +33,7 @@ export interface RenderXPostResult {
 
 /**
  * Layout (media size) → flow chrome HTML → screenshot → measure green hole Y
- * → crop chrome → ffmpeg overlay of primary video + source audio.
+ * → ffmpeg: crop chrome in-graph, overlay primary video + source audio.
  *
  * Text wrap is owned by Chromium. We never place the media hole from a
  * chars-per-line estimate (that caused empty gaps / clipped captions).
@@ -52,7 +51,6 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
   const screenshotFn = opts.screenshotFn ?? screenshotChrome;
   const runFfmpegFn = opts.runFfmpegFn ?? runFfmpeg;
   const measureFn = opts.measureFn ?? measureChromePng;
-  const cropFn = opts.cropFn ?? cropChromePng;
 
   let layout = layoutXPost(opts.assets);
   log.info(
@@ -81,8 +79,8 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
   );
   sw.lap('measure');
 
-  await cropFn(chromePath, layout.canvas.width, layout.canvas.height, { jobId: opts.jobId });
-  sw.lap('crop');
+  // The screenshot is taller than the card; the encode graph crops it to this.
+  const chromeCrop = { ...layout.canvas };
 
   if (layout.canvas.height > XRENDER_MAX_HEIGHT) {
     const factor = XRENDER_MAX_HEIGHT / layout.canvas.height;
@@ -102,25 +100,12 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
   );
   sw.lap('budget');
 
-  const filterComplex = buildXOverlayFiltergraph({
-    layout,
-    videoWidth: opts.assets.primaryVideo.width,
-    videoHeight: opts.assets.primaryVideo.height,
-    durationSec: duration,
-  });
+  const filterComplex = buildXOverlayFiltergraph({ layout, chromeCrop });
   sw.lap('filtergraph');
 
   const outputPath = join(opts.jobDir, 'xrender.mp4');
-  const commonIn = [
-    '-i',
-    opts.assets.primaryVideo.path,
-    '-loop',
-    '1',
-    '-t',
-    String(duration),
-    '-i',
-    chromePath,
-  ];
+  // Chrome is a single still frame; the graph keys it once and loops it.
+  const commonIn = ['-i', opts.assets.primaryVideo.path, '-i', chromePath];
   const videoCodec = [
     '-c:v',
     'libx264',
@@ -135,7 +120,7 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
     '-pix_fmt',
     'yuv420p',
     '-r',
-    '30',
+    String(XRENDER_FPS),
     '-movflags',
     '+faststart',
   ];

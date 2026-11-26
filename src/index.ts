@@ -1,6 +1,7 @@
 import { createBot } from './bot/index.js';
 import { loadConfig, VERSION } from './config/index.js';
 import { createPipeline } from './pipeline.js';
+import { closeSharedBrowser } from './render/x/chromiumBrowser.js';
 import { createLogger } from './util/logger.js';
 import { startupSweep } from './util/tmp.js';
 
@@ -18,6 +19,7 @@ async function main() {
   const shutdown = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down gracefully`);
     await stop();
+    await closeSharedBrowser();
     process.exit(0);
   };
 
