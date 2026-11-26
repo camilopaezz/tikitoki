@@ -82,6 +82,7 @@ describe('callback data helpers', () => {
   it('maps actions to job modes', () => {
     expect(modeFromAction('dl')).toBe('passthrough');
     expect(modeFromAction('xr')).toBe('xrender');
+    expect(modeFromAction('wa')).toBe('sticker');
     expect(modeFromAction('ss')).toBe('slideshow');
   });
 });

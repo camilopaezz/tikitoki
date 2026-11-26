@@ -12,7 +12,7 @@ No watermarks to hunt for, no “open in browser” detours. Send the bot a post
 |----------|------------------|
 | **TikTok** | Download videos · turn photo slideshows into MP4s |
 | **Instagram** | Download reels · download `/p/` photos and videos · **or** render a `/p/` slideshow as MP4 |
-| **X (Twitter)** | Download the video **or** render a dark feed-card clip of the post |
+| **X (Twitter)** | Download the video · render a dark feed-card clip of the post · turn a GIF into a WhatsApp sticker |
 
 Paste a link, then tap a confirm button. The job starts on that tap — if you're on cooldown, the bot tells you how long to wait and the button stays so you don't have to paste the URL again.
 
@@ -33,6 +33,7 @@ Paste an X link and pick what you want (no commands):
 
 - **Download video** — raw post video as MP4
 - **Render post** — feed-style card (avatar, name, text) with the video playing in the media area
+- **WhatsApp sticker** — GIF or video as a silent 512×512 MP4 (non-square clips get black bars). Save it, then use WhatsApp's create-sticker-from-video. WhatsApp drops transparency there, so the bars stay black
 
 ---
 

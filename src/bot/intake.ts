@@ -50,6 +50,7 @@ export function choiceForUrl(url: string): ChoicePrompt {
       buttons: [
         { action: 'dl', label: 'Download video' },
         { action: 'xr', label: 'Render post' },
+        { action: 'wa', label: 'WhatsApp sticker' },
       ],
     };
   }
@@ -74,11 +75,12 @@ export function isChoicePromptMessage(text: string | undefined): boolean {
 }
 
 export const USAGE_MESSAGE =
-  'Send me a TikTok, Instagram, or Twitter/X link, then tap Download. For Instagram /p/ posts you can download photos and videos or render a slideshow. For X posts you can also render a feed card.';
+  'Send me a TikTok, Instagram, or Twitter/X link, then tap Download. For Instagram /p/ posts you can download photos and videos or render a slideshow. For X posts you can also render a feed card or make a WhatsApp sticker.';
 
 export const VIDEO_CHOICE_MESSAGE = 'Download this video?';
 
-export const X_CHOICE_MESSAGE = 'X post detected. Download the video, or render a feed card?';
+export const X_CHOICE_MESSAGE =
+  'X post detected. Download the video, render a feed card, or make a WhatsApp sticker from the GIF or video?';
 
 export const IG_CHOICE_MESSAGE =
   'Instagram post detected. Download the photos and videos, or render a slideshow?';

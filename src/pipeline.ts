@@ -16,6 +16,7 @@ import { resolveTwitterUrl } from './fetch/resolveTwitterUrl.js';
 import { resolveTikTokUrl } from './fetch/resolveUrl.js';
 import type { DownloadedMedia, Job, JobResult, Stage } from './job/types.js';
 import { renderSlideshow } from './render/renderSlideshow.js';
+import { makeStickerVideo } from './render/sticker.js';
 import { renderXPost } from './render/x/renderXPost.js';
 import { createLogger } from './util/logger.js';
 import { isInstagramUrl, isTwitterUrl } from './util/postHost.js';
@@ -151,6 +152,27 @@ async function runXRender(
   return { outputPath };
 }
 
+async function runSticker(
+  job: Job,
+  jobDir: string,
+  config: Config,
+  onStage: (stage: Stage) => Promise<void>,
+): Promise<JobResult> {
+  const resolved = await resolveTwitterUrl(job.url, job.jobId);
+  // X serves GIFs as silent MP4s, so the regular video download covers both.
+  const videoPath = await downloadVideo({
+    url: resolved.url,
+    outDir: jobDir,
+    cookiesPath: config.twitterCookiesPath,
+    jobId: job.jobId,
+    platform: 'twitter',
+  });
+  await onStage('Rendering');
+  const outputPath = await makeStickerVideo(videoPath, jobDir, job.jobId);
+  await onStage('Uploading');
+  return { outputPath, kind: 'video' };
+}
+
 async function fetchTikTok(
   job: Job,
   jobDir: string,
@@ -213,6 +235,13 @@ export function createPipeline(options: PipelineOptions) {
         throw new Error('Feed-card render only works with Twitter/X links.');
       }
       return runXRender(job, jobDir, config, onStage, log);
+    }
+
+    if (job.mode === 'sticker') {
+      if (!isTwitterUrl(job.url)) {
+        throw new Error('WhatsApp stickers only work with Twitter/X links.');
+      }
+      return runSticker(job, jobDir, config, onStage);
     }
 
     if (job.mode === 'slideshow' && !isInstagramUrl(job.url)) {

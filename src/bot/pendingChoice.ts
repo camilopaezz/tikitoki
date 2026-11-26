@@ -64,7 +64,7 @@ export class PendingChoiceStore {
   }
 }
 
-export type ChoiceAction = 'dl' | 'xr' | 'ss';
+export type ChoiceAction = 'dl' | 'xr' | 'ss' | 'wa';
 
 export function encodeCallbackData(action: ChoiceAction, token: string): string {
   return `${CALLBACK_PREFIX}${action}:${token}`;
@@ -74,7 +74,7 @@ export function parseCallbackData(
   data: string,
 ): { action: ChoiceAction; token: string } | undefined {
   if (!data.startsWith(CALLBACK_PREFIX)) return undefined;
-  const match = /^(dl|xr|ss):([a-f0-9]+)$/.exec(data.slice(CALLBACK_PREFIX.length));
+  const match = /^(dl|xr|ss|wa):([a-f0-9]+)$/.exec(data.slice(CALLBACK_PREFIX.length));
   if (!match) return undefined;
   return { action: match[1] as ChoiceAction, token: match[2] };
 }
@@ -82,5 +82,6 @@ export function parseCallbackData(
 export function modeFromAction(action: ChoiceAction): JobMode {
   if (action === 'xr') return 'xrender';
   if (action === 'ss') return 'slideshow';
+  if (action === 'wa') return 'sticker';
   return 'passthrough';
 }

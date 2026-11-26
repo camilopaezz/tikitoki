@@ -2,7 +2,7 @@ export type JobId = string;
 export type Stage = 'Fetching' | 'Rendering' | 'Uploading';
 
 /** How the pipeline should handle the post. Default is passthrough download. */
-export type JobMode = 'passthrough' | 'xrender' | 'slideshow';
+export type JobMode = 'passthrough' | 'xrender' | 'slideshow' | 'sticker';
 
 export interface Job {
   jobId: JobId;
