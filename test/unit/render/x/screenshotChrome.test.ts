@@ -5,6 +5,7 @@ const writeFile = vi.fn();
 const rename = vi.fn();
 const mkdir = vi.fn();
 const access = vi.fn();
+const readFile = vi.fn();
 
 vi.mock('../../../../src/process/run.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../../src/process/run.js')>();
@@ -19,13 +20,28 @@ vi.mock('node:fs/promises', () => ({
   rename: (...args: unknown[]) => rename(...args),
   mkdir: (...args: unknown[]) => mkdir(...args),
   access: (...args: unknown[]) => access(...args),
+  readFile: (...args: unknown[]) => readFile(...args),
 }));
+
+/** Just enough PNG for readPngSize: signature + IHDR width/height. */
+function pngHeader(width: number, height: number): Buffer {
+  const b = Buffer.alloc(33);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(b, 0);
+  b.writeUInt32BE(13, 8);
+  b.write('IHDR', 12, 'latin1');
+  b.writeUInt32BE(width, 16);
+  b.writeUInt32BE(height, 20);
+  b[24] = 8;
+  b[25] = 2;
+  return b;
+}
 
 import { ProcessError, ProcessTimeoutError } from '../../../../src/process/run.js';
 import {
   CHROME_PROCESS_TIMEOUT_MS,
   CHROME_TIMEOUT_MS,
   CHROME_VIRTUAL_TIME_MS,
+  resetChromiumLookup,
   screenshotChrome,
 } from '../../../../src/render/x/screenshotChrome.js';
 
@@ -36,6 +52,7 @@ const opts = {
   height: 800,
   jobId: 'j1',
   chromiumBin: 'chromium',
+  persistent: false,
 } as const;
 
 describe('screenshotChrome', () => {
@@ -45,6 +62,9 @@ describe('screenshotChrome', () => {
     rename.mockReset().mockResolvedValue(undefined);
     mkdir.mockReset().mockResolvedValue(undefined);
     access.mockReset().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    // Chromium usually writes a slightly different size → ffmpeg normalizes it.
+    readFile.mockReset().mockResolvedValue(pngHeader(720, 801));
+    resetChromiumLookup();
   });
 
   it('passes hang-prevention flags and a process timeout to Chromium', async () => {
@@ -111,6 +131,7 @@ describe('screenshotChrome', () => {
       width: opts.width,
       height: opts.height,
       jobId: opts.jobId,
+      persistent: false,
     });
 
     expect(runProcess.mock.calls.some((call) => call[0] === 'chromium-headless-shell')).toBe(true);
@@ -146,5 +167,63 @@ describe('screenshotChrome', () => {
 
     await expect(screenshotChrome(opts)).resolves.toBe('/tmp/job/xchrome/chrome.png');
     expect(runProcess.mock.calls.some((call) => call[0] === 'ffmpeg')).toBe(true);
+  });
+
+  it('skips the ffmpeg resize when the PNG is already the canvas size', async () => {
+    readFile.mockResolvedValue(pngHeader(720, 800));
+    await screenshotChrome(opts);
+    expect(runProcess.mock.calls.some((call) => call[0] === 'ffmpeg')).toBe(false);
+  });
+
+  it('uses the shared browser and never spawns a one-shot Chromium', async () => {
+    const screenshot = vi.fn().mockResolvedValue(pngHeader(720, 800));
+    const withBrowser = vi.fn(async (_bin, _args, fn) => fn({ screenshot }));
+
+    const png = await screenshotChrome({ ...opts, persistent: true, withBrowser });
+
+    expect(png).toBe('/tmp/job/xchrome/chrome.png');
+    const [bin, args] = withBrowser.mock.calls[0];
+    expect(bin).toBe('chromium');
+    expect(args).toContain('--headless=new');
+    expect(args).toContain('--no-sandbox');
+    // Headless "command" switches are rejected alongside remote debugging.
+    expect(args).not.toContain('--default-background-color=00000000');
+    expect(args.some((a: string) => a.startsWith('--screenshot'))).toBe(false);
+    expect(screenshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'file:///tmp/job/xchrome/chrome.html',
+        width: 720,
+        height: 800,
+      }),
+    );
+    expect(writeFile).toHaveBeenCalledWith('/tmp/job/xchrome/chrome.png', expect.any(Buffer));
+    expect(runProcess.mock.calls.some((call) => call[0] === 'chromium')).toBe(false);
+    expect(runProcess.mock.calls.some((call) => call[0] === 'ffmpeg')).toBe(false);
+  });
+
+  it('falls back to the one-shot CLI when the shared browser fails', async () => {
+    const withBrowser = vi.fn().mockRejectedValue(new Error('pipe closed'));
+
+    await screenshotChrome({ ...opts, persistent: true, withBrowser });
+
+    const chromeCall = runProcess.mock.calls.find((call) => call[0] === 'chromium');
+    expect(chromeCall?.[1]).toContain('--screenshot=/tmp/job/xchrome/chrome.png');
+    expect(chromeCall?.[1]).toContain('--default-background-color=00000000');
+  });
+
+  it('looks up the Chromium binary once per process', async () => {
+    runProcess.mockImplementation(async (cmd: string, args?: unknown) => {
+      if (cmd === 'which') {
+        if (Array.isArray(args) && args[0] === 'chromium')
+          return { stdout: '', stderr: '', exitCode: 0 };
+        throw new Error('not found');
+      }
+      return { stdout: '', stderr: '', exitCode: 0 };
+    });
+    const { chromiumBin: _bin, ...noBin } = opts;
+    await screenshotChrome(noBin);
+    const lookups = runProcess.mock.calls.filter((call) => call[0] === 'which').length;
+    await screenshotChrome(noBin);
+    expect(runProcess.mock.calls.filter((call) => call[0] === 'which').length).toBe(lookups);
   });
 });
