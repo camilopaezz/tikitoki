@@ -4,6 +4,7 @@ import { runFfmpeg } from '../process/ffmpeg.js';
 import { createLogger } from '../util/logger.js';
 import { MAX_VIDEO_BITRATE } from './bitrate.js';
 import { probeVideo } from './probe.js';
+import { QUALITY_X264_PRESET } from './x264.js';
 
 export class OversizedVideoError extends Error {
   constructor(
@@ -56,7 +57,7 @@ export async function fitVideoToSize(
       '-c:v',
       'libx264',
       '-preset',
-      'medium',
+      QUALITY_X264_PRESET,
       '-pix_fmt',
       'yuv420p',
       '-b:v',

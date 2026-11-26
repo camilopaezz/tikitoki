@@ -4,15 +4,13 @@ import { runFfmpeg } from '../../process/ffmpeg.js';
 import { createLogger } from '../../util/logger.js';
 import { createStopwatch } from '../../util/stopwatch.js';
 import { computeBitrateBudget } from '../bitrate.js';
+import { DEFAULT_X264_PRESET } from '../x264.js';
 import { buildChromeHtml } from './chromeHtml.js';
 import { buildXOverlayFiltergraph, XRENDER_FPS } from './filtergraph.js';
 import { layoutXPost, XRENDER_MAX_HEIGHT } from './layout.js';
 import { measureChromePng } from './measureChrome.js';
 import { screenshotChrome } from './screenshotChrome.js';
 import type { XPostLayout } from './types.js';
-
-/** Fast enough for bot hosts; quality checked against feed-card chrome at 4 Mbps. */
-const XRENDER_PRESET = 'veryfast';
 
 export interface RenderXPostOptions {
   jobId: string;
@@ -110,7 +108,7 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
     '-c:v',
     'libx264',
     '-preset',
-    XRENDER_PRESET,
+    DEFAULT_X264_PRESET,
     '-b:v',
     String(budget.videoBitrate),
     '-maxrate',
@@ -130,7 +128,7 @@ export async function renderXPost(opts: RenderXPostOptions): Promise<RenderXPost
   const twoPass = !budget.hitMaxBitrate;
   log.info(
     `xrender encode start bitrate=${budget.videoBitrate} canvas=${canvas.width}x${canvas.height} ` +
-      `duration=${duration}s preset=${XRENDER_PRESET} pass=${twoPass ? 2 : 1}` +
+      `duration=${duration}s preset=${DEFAULT_X264_PRESET} pass=${twoPass ? 2 : 1}` +
       `${budget.hitMaxBitrate ? ' (max bitrate)' : ' (size budget)'}`,
   );
 

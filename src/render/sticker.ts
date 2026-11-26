@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { runFfmpeg } from '../process/ffmpeg.js';
+import { DEFAULT_X264_PRESET } from './x264.js';
 
 /** WhatsApp stickers are square; its sticker maker crops video to 512x512. */
 export const STICKER_SIZE_PX = 512;
@@ -30,7 +31,7 @@ export function stickerArgs(inputPath: string, outputPath: string): string[] {
     '-c:v',
     'libx264',
     '-preset',
-    'medium',
+    DEFAULT_X264_PRESET,
     '-crf',
     '23',
     '-pix_fmt',
