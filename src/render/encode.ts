@@ -3,6 +3,7 @@ import { runFfmpeg } from '../process/ffmpeg.js';
 import { createLogger } from '../util/logger.js';
 import type { BitrateBudget } from './bitrate.js';
 import type { Canvas } from './canvas.js';
+import { QUALITY_X264_PRESET } from './x264.js';
 
 const logger = createLogger();
 
@@ -68,7 +69,7 @@ function buildOutputArgs(opts: EncodeOptions, pass: 1 | 2, outputPath?: string):
     '-c:v',
     'libx264',
     '-preset',
-    'medium',
+    QUALITY_X264_PRESET,
     '-b:v',
     String(opts.budget.videoBitrate),
     '-maxrate',

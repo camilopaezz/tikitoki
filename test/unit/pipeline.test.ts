@@ -45,6 +45,10 @@ vi.mock('../../src/fetch/downloadXAssets.js', () => ({
 vi.mock('../../src/render/x/renderXPost.js', () => ({
   renderXPost: (...args: unknown[]) => renderXPost(...args),
 }));
+const makeStickerVideo = vi.fn();
+vi.mock('../../src/render/sticker.js', () => ({
+  makeStickerVideo: (...args: unknown[]) => makeStickerVideo(...args),
+}));
 vi.mock('../../src/fetch/extractInstagramMusic.js', () => ({
   extractMusicFromDir: (...args: unknown[]) => extractMusicFromDir(...args),
 }));
@@ -699,5 +703,43 @@ describe('createPipeline', () => {
       'Feed-card render only works with Twitter/X links.',
     );
     expect(renderXPost).not.toHaveBeenCalled();
+  });
+
+  it('runs sticker: downloads the X clip uncapped and converts it to a square MP4', async () => {
+    const job = {
+      ...baseJob(),
+      jobId: 'pipe-test-sticker',
+      url: 'https://x.com/user/status/1234567890/photo/1',
+      mode: 'sticker' as const,
+    };
+    resolveTwitterUrl.mockResolvedValue({ url: 'https://x.com/user/status/1234567890' });
+    downloadVideo.mockResolvedValue('/tmp/gif.mp4');
+    makeStickerVideo.mockResolvedValue('/tmp/sticker.mp4');
+
+    const stages: string[] = [];
+    const runPipeline = createPipeline({ config });
+    const result = await runPipeline(job, async (stage) => {
+      stages.push(stage);
+    });
+
+    expect(stages).toEqual(['Fetching', 'Rendering', 'Uploading']);
+    expect(result).toEqual({ outputPath: '/tmp/sticker.mp4', kind: 'video' });
+    expect(downloadVideo).toHaveBeenCalledWith(
+      expect.not.objectContaining({ maxSizeMb: expect.anything() }),
+    );
+    expect(makeStickerVideo).toHaveBeenCalledWith('/tmp/gif.mp4', expect.any(String), job.jobId);
+  });
+
+  it('rejects sticker mode for non-Twitter URLs', async () => {
+    const job = {
+      ...baseJob(),
+      url: 'https://www.tiktok.com/@u/video/1',
+      mode: 'sticker' as const,
+    };
+    const runPipeline = createPipeline({ config });
+    await expect(runPipeline(job, async () => {})).rejects.toThrow(
+      'WhatsApp stickers only work with Twitter/X links.',
+    );
+    expect(makeStickerVideo).not.toHaveBeenCalled();
   });
 });

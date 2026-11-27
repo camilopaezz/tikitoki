@@ -122,12 +122,13 @@ describe('parseIntake', () => {
 });
 
 describe('choiceForUrl', () => {
-  it('offers download and render for X URLs', () => {
+  it('offers download, render and sticker for X URLs', () => {
     expect(choiceForUrl('https://x.com/u/status/1')).toEqual({
       message: X_CHOICE_MESSAGE,
       buttons: [
         { action: 'dl', label: 'Download video' },
         { action: 'xr', label: 'Render post' },
+        { action: 'wa', label: 'WhatsApp sticker' },
       ],
     });
   });
